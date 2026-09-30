@@ -1,5 +1,6 @@
 import express from 'express';
 import inventoryRoutes from './routes/inventoryRoutes.js';
+import rateLimiter from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
@@ -12,6 +13,7 @@ app.get('/', (_req, res) => {
   });
 });
 
+app.use('/api', rateLimiter);
 app.use('/api/inventory', inventoryRoutes);
 app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
 app.use(errorHandler);

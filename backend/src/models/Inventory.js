@@ -19,6 +19,10 @@ const inventorySchema = new mongoose.Schema(
       required: true,
       default: 0,
       min: 0,
+      validate: {
+        validator: Number.isSafeInteger,
+        message: 'Stock must be a safe integer',
+      },
     },
 
     status: {
@@ -29,8 +33,11 @@ const inventorySchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   },
 );
+
+inventorySchema.index({ createdAt: -1, _id: -1 });
 
 inventorySchema.pre('save', function () {
   if (this.stock === 0) {

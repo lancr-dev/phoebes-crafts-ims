@@ -24,7 +24,7 @@ aligned with `FRONTEND_ORIGIN=http://localhost:5173` in the backend configuratio
 Use the existing admin credentials configured in the backend.
 
 Development API requests default to `http://localhost:5001/api`. To change this,
-copy `.env.example` to `.env.local`, update `VITE_API_BASE_URL`, and restart Vite.
+create `frontend/.env.local`, set `VITE_API_BASE_URL`, and restart Vite.
 This URL is public configuration; never put backend secrets into a `VITE_` variable.
 Production defaults to `/api` unless an API URL is supplied at build time. The
 production host must serve API requests and fall back to `index.html` for frontend

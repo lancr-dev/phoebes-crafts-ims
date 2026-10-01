@@ -2,8 +2,8 @@
 
 Keep `MONGO_URI`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`,
 `ADMIN_USERNAME`, and `ADMIN_PASSWORD_HASH` in the backend environment only.
-Use `.env.example` as a template for local `.env` configuration. All `.env` and
-`.env.*` files are ignored by Git except `.env.example`. Store a scrypt password
+Configure local values in `backend/.env`. All `.env` and
+`.env.*` files are ignored by Git. Store a scrypt password
 hash rather than a plaintext admin password. In production, supply these through
 the host's protected environment settings and set `NODE_ENV=production` so session
 cookies require HTTPS. Values prefixed with `VITE_` are exposed to the browser and

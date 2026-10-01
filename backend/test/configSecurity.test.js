@@ -10,15 +10,15 @@ process.env.ADMIN_PASSWORD_HASH = `scrypt$32768$8$3$${'0'.repeat(32)}$${'0'.repe
 process.env.FRONTEND_ORIGIN = 'https://crafts.example';
 const { sessionCookieName, sessionCookieOptions } = await import('../src/config/auth.js');
 
-test('private environment variants are ignored while safe templates remain shareable', () => {
+test('environment files and variants are ignored', () => {
   const privatePaths = [
     '.env', '.env.production',
     'backend/.env', 'backend/.env.production', 'backend/.env.staging', 'backend/.env.production.local',
     'frontend/.env', 'frontend/.env.production', 'frontend/.env.local', 'frontend/.env.test',
+    '.env.example', 'backend/.env.example', 'frontend/.env.example',
   ];
-  const templates = ['.env.example', 'backend/.env.example', 'frontend/.env.example'];
   const output = execFileSync('git', ['check-ignore', '--no-index', '--stdin'], {
-    input: [...privatePaths, ...templates].join('\n') + '\n', encoding: 'utf8',
+    input: privatePaths.join('\n') + '\n', encoding: 'utf8',
   });
   assert.deepEqual(output.trim().split(/\r?\n/), privatePaths);
 });

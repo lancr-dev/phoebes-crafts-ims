@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { createServer } from 'vite';
-import { parseInventoryPage, validateMaterialForm, validateAdjustment, getInventoryError, requiresInventoryRefresh } from '../src/utils/inventoryData.js';
+import { parseInventoryPage, parseInventoryCategories, validateMaterialForm, validateAdjustment, getInventoryError, requiresInventoryRefresh } from '../src/utils/inventoryData.js';
 
 const item = { _id: '0123456789abcdef01234567', itemName: 'Cotton yarn', category: 'Yarn', stock: 12, status: 'In Stock' };
 const pageData = { items: [item], currentPage: 2, pageSize: 20, totalItems: 21, totalPages: 2 };
@@ -18,6 +18,7 @@ const { default: InventoryModal } = await vite.ssrLoadModule('/src/components/In
 const { default: StockAdjustmentModal } = await vite.ssrLoadModule('/src/components/StockAdjustmentModal.jsx');
 const { default: DeleteMaterialModal } = await vite.ssrLoadModule('/src/components/DeleteMaterialModal.jsx');
 const { default: InventoryPage } = await vite.ssrLoadModule('/src/pages/InventoryPage.jsx');
+const { default: CategoryFilter } = await vite.ssrLoadModule('/src/components/CategoryFilter.jsx');
 const { default: AuthContext } = await vite.ssrLoadModule('/src/auth/AuthContext.js');
 const { default: Sidebar } = await vite.ssrLoadModule('/src/components/Sidebar.jsx');
 const render = (Component, props) => renderToStaticMarkup(createElement(Component, props));
@@ -181,4 +182,67 @@ test('inventory route starts in a loading state and sidebar highlights the inven
   const sidebar = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/inventory'] }, createElement(Sidebar, {})));
   assert.match(sidebar, /href="\/inventory"/);
   assert.match(sidebar, /aria-current="page"/);
+});
+
+test('category options reject malformed and duplicate labels while allowing punctuation', () => {
+  assert.deepEqual(parseInventoryCategories({ categories: [] }), []);
+  assert.deepEqual(parseInventoryCategories({ categories: ['Beads.* (small)', 'Yarn'] }), ['Beads.* (small)', 'Yarn']);
+  for (const invalid of [{}, { categories: null }, { categories: [''] }, { categories: [42] },
+    { categories: [' Yarn '] }, { categories: ['Yarn', 'Yarn'] }]) assert.throws(() => parseInventoryCategories(invalid));
+});
+
+test('selected category is sent on every paginated request and unfiltered responses are rejected', async () => {
+  const requests = [];
+  const firstPage = { ...pageData, currentPage: 1, items: Array.from({ length: 20 }, (_, index) => ({ ...item, _id: (index + 1).toString(16).padStart(24, '0') })) };
+  apiClient.defaults.adapter = async (config) => {
+    requests.push(config);
+    return { data: config.params.page === 1 ? firstPage : pageData, status: 200, config, headers: {} };
+  };
+  assert.deepEqual(await api.getInventoryItems(1, undefined, 'Yarn'), firstPage);
+  // The final page contains one matching item and still counts twenty-one globally in the category.
+  assert.deepEqual(await api.getInventoryItems(2, undefined, 'Yarn'), pageData);
+  assert.ok(requests.every((request) => request.params.category === 'Yarn' && request.params.limit === 20));
+  await assert.rejects(api.getInventoryItems(2, undefined, 'Beads'), /Invalid category filter response/);
+});
+
+test('category API fetches global labels using credentials and supports cancellation', async () => {
+  let request;
+  apiClient.defaults.adapter = async (config) => { request = config; return { data: { categories: ['Beads', 'Yarn'] }, status: 200, config, headers: {} }; };
+  const controller = new AbortController();
+  assert.deepEqual(await api.getInventoryCategories(controller.signal), ['Beads', 'Yarn']);
+  assert.equal(request.url, '/inventory/categories');
+  assert.equal(request.withCredentials, true);
+  assert.equal(request.signal, controller.signal);
+  controller.abort();
+  await assert.rejects(api.getInventoryCategories(controller.signal), (error) => error.code === 'ERR_CANCELED');
+});
+
+test('category filter has a named disclosure, native labeled select, and a clear action', () => {
+  const markup = render(CategoryFilter, { category: 'Yarn', categories: ['Beads', 'Yarn'], onChange: () => {} });
+  assert.match(markup, /Filter by category/);
+  assert.match(markup, /aria-expanded="false"/);
+  assert.match(markup, /aria-controls=/);
+  assert.match(markup, /hidden=""/);
+  assert.match(markup, /<label[^>]*>Category<\/label>/);
+  assert.match(markup, /<option value="">All categories<\/option>/);
+  assert.match(markup, /<option value="Yarn" selected="">Yarn<\/option>/);
+  assert.match(markup, /Clear filter/);
+});
+
+test('filter retains a removed selected category and escapes stored labels', () => {
+  const markup = render(CategoryFilter, { category: 'Removed category', categories: ['<script>'], onChange: () => {} });
+  assert.match(markup, /value="Removed category" selected=""/);
+  assert.match(markup, /&lt;script&gt;/);
+  assert.doesNotMatch(markup, /<script>/);
+});
+
+test('categories distinguish loading, empty, failure, and pending-save controls', () => {
+  assert.match(render(CategoryFilter, { category: '', categories: [], isLoading: true }), /Loading categories/);
+  assert.match(render(CategoryFilter, { category: '', categories: [], isLoading: false }), /No categories yet/);
+  const failed = render(CategoryFilter, { category: '', categories: [], error: 'Unable to load.' });
+  assert.match(failed, /Retry categories/);
+  assert.match(failed, /role="alert"/);
+  assert.match(failed, /<select[^>]*disabled=""/);
+  const saving = render(CategoryFilter, { category: 'Yarn', categories: ['Yarn'], disabled: true });
+  assert.equal((saving.match(/disabled=""/g) || []).length, 3);
 });

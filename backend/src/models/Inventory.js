@@ -38,6 +38,7 @@ const inventorySchema = new mongoose.Schema(
 );
 
 inventorySchema.index({ createdAt: -1, _id: -1 });
+inventorySchema.index({ category: 1, createdAt: -1, _id: -1 });
 
 inventorySchema.pre('save', function () {
   if (this.stock === 0) {

@@ -4,6 +4,7 @@ import {
   createInventoryItem,
   getInventoryItems,
   getInventoryDashboard,
+  getInventoryCategories,
   getInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/', createInventoryItem);
 router.get('/', getInventoryItems);
 router.get('/dashboard', getInventoryDashboard);
+router.get('/categories', getInventoryCategories);
 
 router.get('/:id', getInventoryItem);
 router.put('/:id', updateInventoryItem);

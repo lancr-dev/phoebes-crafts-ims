@@ -17,6 +17,7 @@ import {
   parseInventoryInput,
   parseQuantity,
   parsePagination,
+  parseInventoryFilter,
 } from '../utils/inventoryValidation.js';
 
 export const createInventoryItem = async (req, res) => {
@@ -26,12 +27,14 @@ export const createInventoryItem = async (req, res) => {
 
 export const getInventoryItems = async (req, res) => {
   const { page, skip, limit } = parsePagination(req.query);
+  const filter = parseInventoryFilter(req.query);
   if (req.query.paginated !== undefined) {
     if (req.query.paginated !== 'true') {
       throw new HttpError(400, 'paginated must be true when provided');
     }
     // Count and select from the same aggregation; preserve the legacy array response below.
     const [result] = await Inventory.aggregate([
+      ...(filter.category !== undefined ? [{ $match: filter }] : []),
       { $sort: { createdAt: -1, _id: -1 } },
       { $facet: {
         items: [
@@ -47,11 +50,17 @@ export const getInventoryItems = async (req, res) => {
       totalItems, totalPages: Math.ceil(totalItems / limit),
     });
   }
-  const items = await Inventory.find()
+  const items = await Inventory.find(filter)
     .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit);
   res.status(200).json(items);
+};
+
+export const getInventoryCategories = async (_req, res) => {
+  const categories = await Inventory.distinct('category');
+  categories.sort((left, right) => left.localeCompare(right, 'en-PH'));
+  res.status(200).json({ categories });
 };
 
 export const getInventoryDashboard = async (_req, res) => {

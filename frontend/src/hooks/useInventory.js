@@ -6,7 +6,7 @@ import { getInventoryError } from '../utils/inventoryData.js';
 
 export default function useInventory() {
   const { expireSession } = useAuth();
-  const [request, setRequest] = useState({ page: 1, version: 0 });
+  const [request, setRequest] = useState({ page: 1, version: 0, category: '' });
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +17,7 @@ export default function useInventory() {
     controllerRef.current = controller;
     const load = async () => {
       try {
-        const result = await getInventoryItems(request.page, controller.signal);
+        const result = await getInventoryItems(request.page, controller.signal, request.category);
         if (controller.signal.aborted) return;
         // A deletion (including one by another admin) can remove the final page.
         const lastPage = Math.max(1, result.totalPages);
@@ -45,13 +45,15 @@ export default function useInventory() {
     return () => controller.abort();
   }, [expireSession, request]);
 
-  const loadPage = (page = request.page) => {
+  const loadPage = (page = request.page, category = request.category) => {
     controllerRef.current?.abort();
     setIsLoading(true);
     setError('');
     setData(null);
-    setRequest((current) => ({ page, version: current.version + 1 }));
+    setRequest((current) => ({ page, category, version: current.version + 1 }));
   };
 
-  return { data, page: request.page, isLoading, error, loadPage };
+  const changeCategory = (category) => loadPage(1, category);
+
+  return { data, page: request.page, category: request.category, isLoading, error, loadPage, changeCategory };
 }

@@ -31,6 +31,11 @@ const aggregate = mock.method(Inventory, 'aggregate', async () => {
   if (aggregationResult instanceof Error) throw aggregationResult;
   return aggregationResult;
 });
+let categoryNames = ['Yarn', 'Ribbon', 'Beads'];
+const distinct = mock.method(Inventory, 'distinct', async () => {
+  if (categoryNames instanceof Error) throw categoryNames;
+  return [...categoryNames];
+});
 const legacyItems = [{ _id: '0123456789abcdef01234567', itemName: 'Yarn', category: 'Thread', stock: 12, status: 'In Stock' }];
 const legacyCalls = [];
 const find = mock.method(Inventory, 'find', () => ({
@@ -113,6 +118,65 @@ test('inventory failures return sanitized errors rather than empty success', asy
   const log = mock.method(console, 'error', () => {});
   try {
     const response = await request('?paginated=true');
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), { message: 'An unexpected server error occurred' });
+  } finally { log.mock.restore(); }
+});
+
+test('category filtering matches before sorting, counting, and paginating', async () => {
+  aggregationResult = [{ items: legacyItems, totals: [{ totalItems: 21 }] }];
+  const response = await request('?paginated=true&page=2&limit=20&category=Yarn');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { items: legacyItems, currentPage: 2, pageSize: 20, totalItems: 21, totalPages: 2 });
+  const pipeline = aggregate.mock.calls.at(-1).arguments[0];
+  assert.deepEqual(pipeline.slice(0, 2), [{ $match: { category: 'Yarn' } }, { $sort: { createdAt: -1, _id: -1 } }]);
+  assert.deepEqual(pipeline[2].$facet.items.slice(0, 2), [{ $skip: 20 }, { $limit: 20 }]);
+  assert.deepEqual(pipeline[2].$facet.totals, [{ $count: 'totalItems' }]);
+});
+
+test('category labels with regex characters are literal matches and whitespace is trimmed', async () => {
+  aggregationResult = [{ items: [], totals: [] }];
+  const response = await request(`?paginated=true&category=${encodeURIComponent('  Beads.* (small)  ')}`);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).totalItems, 0);
+  assert.deepEqual(aggregate.mock.calls.at(-1).arguments[0][0], { $match: { category: 'Beads.* (small)' } });
+  const legacy = await request('?category=Yarn');
+  assert.equal(legacy.status, 200);
+  await legacy.json();
+  assert.deepEqual(find.mock.calls.at(-1).arguments[0], { category: 'Yarn' });
+});
+
+test('empty or repeated category parameters fail before querying', async () => {
+  const calls = aggregate.mock.callCount();
+  for (const query of ['?paginated=true&category=', '?paginated=true&category=%20%20', '?paginated=true&category=Yarn&category=Beads']) {
+    const response = await request(query);
+    assert.equal(response.status, 400);
+    await response.json();
+  }
+  assert.equal(aggregate.mock.callCount(), calls);
+});
+
+test('category discovery requires a session and is routed before inventory IDs', async () => {
+  const calls = distinct.mock.callCount();
+  const denied = await request('/categories', false);
+  assert.equal(denied.status, 401);
+  await denied.json();
+  assert.equal(distinct.mock.callCount(), calls);
+  const response = await request('/categories');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await response.json(), { categories: ['Beads', 'Ribbon', 'Yarn'] });
+  assert.deepEqual(distinct.mock.calls.at(-1).arguments, ['category']);
+});
+
+test('category discovery returns an empty list for an empty inventory and fails safely', async () => {
+  categoryNames = [];
+  const empty = await request('/categories');
+  assert.deepEqual(await empty.json(), { categories: [] });
+  categoryNames = new Error('private database information');
+  const log = mock.method(console, 'error', () => {});
+  try {
+    const response = await request('/categories');
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { message: 'An unexpected server error occurred' });
   } finally { log.mock.restore(); }

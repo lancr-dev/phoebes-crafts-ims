@@ -1,17 +1,22 @@
 import apiClient from './apiClient.js';
 import { parseDashboard } from '../utils/dashboardData.js';
-import { INVENTORY_PAGE_SIZE, parseInventoryPage, parseMaterial } from '../utils/inventoryData.js';
+import { INVENTORY_PAGE_SIZE, parseInventoryPage, parseMaterial, parseInventoryCategories } from '../utils/inventoryData.js';
 
 export const getInventoryDashboard = async (signal) => {
   const { data } = await apiClient.get('/inventory/dashboard', { signal });
   return parseDashboard(data);
 };
 
-export const getInventoryItems = async (page, signal) => {
+export const getInventoryItems = async (page, signal, category = '') => {
   const { data } = await apiClient.get('/inventory', {
-    params: { page, limit: INVENTORY_PAGE_SIZE, paginated: true }, signal,
+    params: { page, limit: INVENTORY_PAGE_SIZE, paginated: true, ...(category && { category }) }, signal,
   });
-  return parseInventoryPage(data, page);
+  return parseInventoryPage(data, page, category);
+};
+
+export const getInventoryCategories = async (signal) => {
+  const { data } = await apiClient.get('/inventory/categories', { signal });
+  return parseInventoryCategories(data);
 };
 
 export const createInventoryItem = async (input) => {

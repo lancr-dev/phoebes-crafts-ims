@@ -69,6 +69,16 @@ Open the Inventory navigation tab or `/inventory`. The page loads twenty materia
 at a time, newest first, with previous/next controls and a total count. Empty,
 loading, and failed requests have distinct states.
 
+Filter by category opens a labeled category selector sourced from the full
+inventory. Selecting a stored category applies an exact, case-sensitive server
+filter and returns to page one. Paging and refresh retain the selection; Clear
+filter or All categories restores the full list. Counts and pagination describe
+only matching materials. A category with no remaining materials has a distinct
+empty state. Category choices refresh after adding, editing, deleting, or using
+Refresh. If a saved material falls outside the selected category, the success
+message explains how to find it. A failed category lookup can be retried without
+blocking the unfiltered inventory page.
+
 Add materials with a name, category, and nonnegative whole starting stock. Edit
 changes the name and category only; the increase/decrease controls accept a positive
 whole quantity. This avoids replacing stock with an old value during a metadata

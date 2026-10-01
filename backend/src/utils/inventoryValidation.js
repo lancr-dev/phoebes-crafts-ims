@@ -49,6 +49,14 @@ export const parseQuantity = (body) => {
   return body.quantity;
 };
 
+export const parseInventoryFilter = (query) => {
+  if (query.category === undefined) return {};
+  if (typeof query.category !== 'string' || !query.category.trim()) {
+    throw new HttpError(400, 'category must be a nonempty string');
+  }
+  return { category: query.category.trim() };
+};
+
 export const parsePagination = (query) => {
   const parse = (value, fallback, field) => {
     if (value === undefined) return fallback;

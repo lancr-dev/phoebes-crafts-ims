@@ -12,7 +12,7 @@ export const parseMaterial = (item) => {
   return { _id: item._id, itemName: item.itemName, category: item.category, stock: item.stock, status: item.status };
 };
 
-export const parseInventoryPage = (data, requestedPage) => {
+export const parseInventoryPage = (data, requestedPage, category = '') => {
   if (!data || !Array.isArray(data.items) || data.currentPage !== requestedPage ||
     data.pageSize !== INVENTORY_PAGE_SIZE ||
     !Number.isSafeInteger(data.totalItems) || data.totalItems < 0 ||
@@ -22,8 +22,19 @@ export const parseInventoryPage = (data, requestedPage) => {
   const expectedLength = Math.min(INVENTORY_PAGE_SIZE, Math.max(0, data.totalItems - (requestedPage - 1) * INVENTORY_PAGE_SIZE));
   if (data.items.length !== expectedLength) throw new Error('Invalid inventory page size');
   const items = data.items.map(parseMaterial);
+  if (category && items.some((item) => item.category !== category)) throw new Error('Invalid category filter response');
   if (new Set(items.map((item) => item._id)).size !== items.length) throw new Error('Duplicate inventory materials');
   return { ...data, items };
+};
+
+export const parseInventoryCategories = (data) => {
+  const categories = data?.categories;
+  if (!Array.isArray(categories) || categories.some((category) =>
+    typeof category !== 'string' || !category.trim() || category !== category.trim()) ||
+    new Set(categories).size !== categories.length) {
+    throw new Error('Invalid inventory categories');
+  }
+  return categories;
 };
 
 const wholeNumber = (value) => typeof value === 'string' && /^\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value));

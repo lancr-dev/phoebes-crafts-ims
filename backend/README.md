@@ -62,6 +62,17 @@ The metadata response is opt-in. Omitting `paginated` preserves the existing arr
 response for older clients; an invalid `paginated` value returns 400. Existing
 create/edit/delete/stock routes and transactional stock history remain unchanged.
 
+An optional `category` query parameter filters by the exact stored category
+(after trimming whitespace) before sorting, counting, and pagination. It works
+with both response formats. Blank and repeated category parameters return 400;
+labels are literal string matches, not regular expressions or MongoDB operators.
+The inventory model declares a compound category/createdAt/ID index for this query.
+
+`GET /api/inventory/categories` requires the admin session and returns
+`{ categories: ["Beads", "Yarn"] }`, containing the distinct stored categories
+across the full inventory, sorted alphabetically. Empty inventory returns an empty
+array. The route is registered before `/:id`.
+
 ## Inventory logs API
 
 `GET /api/inventory/logs/all?paginated=true&page=1&limit=20` returns

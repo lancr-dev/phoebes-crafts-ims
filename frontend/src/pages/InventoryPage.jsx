@@ -6,14 +6,17 @@ import InventoryPagination from '../components/InventoryPagination.jsx';
 import InventoryModal from '../components/InventoryModal.jsx';
 import StockAdjustmentModal from '../components/StockAdjustmentModal.jsx';
 import DeleteMaterialModal from '../components/DeleteMaterialModal.jsx';
+import CategoryFilter from '../components/CategoryFilter.jsx';
 import useInventory from '../hooks/useInventory.js';
+import useInventoryCategories from '../hooks/useInventoryCategories.js';
 import useAuth from '../hooks/useAuth.js';
 import { createInventoryItem, updateInventoryItem, adjustInventoryStock, deleteInventoryItem } from '../services/inventoryApi.js';
 import { getInventoryError, requiresInventoryRefresh } from '../utils/inventoryData.js';
 import '../styles/inventory-page.css';
 
 export default function InventoryPage() {
-  const { data, page, isLoading, error, loadPage } = useInventory();
+  const { data, page, category, isLoading, error, loadPage, changeCategory } = useInventory();
+  const categoryData = useInventoryCategories();
   const { expireSession } = useAuth();
   const [dialog, setDialog] = useState(null);
   const [isPending, setIsPending] = useState(false);
@@ -37,7 +40,10 @@ export default function InventoryPage() {
   const closeDialog = () => {
     if (pendingRef.current) return;
     setDialog(null);
-    if (mustRefresh) loadPage(dialog?.type === 'add' ? 1 : page);
+    if (mustRefresh) {
+      loadPage(dialog?.type === 'add' ? 1 : page);
+      categoryData.refresh();
+    }
   };
 
   const saveChange = async (input) => {
@@ -53,9 +59,11 @@ export default function InventoryPage() {
       else await adjustInventoryStock(item._id, type, input);
       if (!mountedRef.current) return;
       const messages = { add: 'Material added.', edit: 'Material updated.', delete: 'Material deleted.', increase: 'Stock increased.', decrease: 'Stock decreased.' };
-      toast.success(messages[type], { id: 'inventory-change' });
+      const outsideFilter = category && ['add', 'edit'].includes(type) && input.category !== category;
+      toast.success(`${messages[type]}${outsideFilter ? ' Clear the category filter to see this material.' : ''}`, { id: 'inventory-change' });
       setDialog(null);
       loadPage(type === 'add' ? 1 : page);
+      if (['add', 'edit', 'delete'].includes(type)) categoryData.refresh();
     } catch (failure) {
       if (!mountedRef.current) return;
       if (failure.response?.status === 401) {
@@ -85,7 +93,7 @@ export default function InventoryPage() {
           <p className="inventory-introduction">Manage your materials, one stock change at a time.</p>
         </div>
         <div className="inventory-heading-actions">
-          <button className="inventory-button" type="button" onClick={() => loadPage()} disabled={isLoading || isPending}>
+          <button className="inventory-button" type="button" onClick={() => { loadPage(); categoryData.refresh(); }} disabled={isLoading || isPending}>
             <RefreshCw size={16} aria-hidden="true" />Refresh
           </button>
           <button className="inventory-button inventory-button-primary" type="button" onClick={() => openDialog('add')} disabled={isLoading || isPending || Boolean(error)}>
@@ -93,6 +101,9 @@ export default function InventoryPage() {
           </button>
         </div>
       </header>
+
+      <CategoryFilter category={category} categories={categoryData.categories} isLoading={categoryData.isLoading}
+        error={categoryData.error} onChange={changeCategory} onRetry={categoryData.refresh} disabled={isPending} />
 
       {error && <div className="inventory-page-error" role="alert"><p>{error}</p><p>Use Refresh to try again.</p></div>}
 
@@ -102,8 +113,8 @@ export default function InventoryPage() {
         ) : data.items.length === 0 ? (
           <div className="inventory-state">
             <PackageOpen size={28} aria-hidden="true" />
-            <h2>No materials yet.</h2>
-            <p>Add your first material to start tracking stock.</p>
+            <h2>{category ? 'No materials in this category.' : 'No materials yet.'}</h2>
+            <p>{category ? 'Choose another category or clear the filter to see all materials.' : 'Add your first material to start tracking stock.'}</p>
           </div>
         ) : <InventoryTable items={data.items} onAction={openDialog} disabled={isPending || isLoading} />}
       </section>

@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import Inventory from '../models/Inventory.js';
 import InventoryLog from '../models/InventoryLog.js';
+import { getDashboard } from '../services/dashboardService.js';
 import {
   createItem,
   updateItem,
@@ -28,6 +29,10 @@ export const getInventoryItems = async (req, res) => {
     .skip(skip)
     .limit(limit);
   res.status(200).json(items);
+};
+
+export const getInventoryDashboard = async (_req, res) => {
+  res.status(200).json(await getDashboard());
 };
 
 export const getInventoryItem = async (req, res) => {

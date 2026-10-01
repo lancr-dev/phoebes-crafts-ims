@@ -1,0 +1,42 @@
+.app-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-block-size: 5rem;
+  padding: var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.navbar-workspace-label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+}
+
+.navbar-account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  max-inline-size: 60%;
+}
+
+.navbar-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  background: var(--color-soft);
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.navbar-account-details { display: flex; flex-direction: column; min-inline-size: 0; gap: var(--space-1); }
+.navbar-account-role { color: var(--color-muted); font-size: 0.6875rem; }
+.navbar-account-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; font-weight: 600; }
+
+@media (min-width: 40rem) { .app-navbar { padding-inline: var(--space-8); } }
+@media (min-width: 64rem) { .app-navbar { padding-inline: clamp(2rem, 4vw, 4rem); } }

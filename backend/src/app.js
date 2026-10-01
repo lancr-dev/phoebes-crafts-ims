@@ -1,12 +1,24 @@
 import express from 'express';
+import cors from 'cors';
 import inventoryRoutes from './routes/inventoryRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import { frontendOrigin } from './config/auth.js';
 import { requireAdmin, requireTrustedOrigin } from './middleware/auth.js';
 import rateLimiter from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
 
+// Handle preflight before authentication/rate limiting and include CORS on errors.
+app.use(
+  cors({
+    origin: frontendOrigin ? [frontendOrigin] : false,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type'],
+    exposedHeaders: ['Content-Disposition', 'Retry-After'],
+  }),
+);
 app.use(express.json());
 
 app.get('/', (_req, res) => {

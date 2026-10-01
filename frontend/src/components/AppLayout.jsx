@@ -1,0 +1,42 @@
+import { useRef, useState } from 'react';
+import { Outlet } from 'react-router';
+import toast from 'react-hot-toast';
+import Sidebar from './Sidebar.jsx';
+import Navbar from './Navbar.jsx';
+import useAuth from '../hooks/useAuth.js';
+import { getAuthError } from '../utils/authErrors.js';
+import '../styles/app-layout.css';
+
+export default function AppLayout() {
+  const { admin, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const signingOutRef = useRef(false);
+
+  const handleSignOut = async () => {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      toast.success('Signed out successfully.', { id: 'sign-out' });
+    } catch (error) {
+      toast.error(getAuthError(error, { action: 'sign out', offline: !navigator.onLine }), { id: 'sign-out' });
+    } finally {
+      signingOutRef.current = false;
+      setIsSigningOut(false);
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <a className="app-skip-link" href="#dashboard-content">Skip to dashboard</a>
+      <Sidebar onSignOut={handleSignOut} isSigningOut={isSigningOut} />
+      <div className="app-workspace">
+        <Navbar username={admin.username} />
+        <main className="app-main" id="dashboard-content" tabIndex={-1}>
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

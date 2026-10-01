@@ -1,0 +1,38 @@
+.recent-inventory { min-inline-size: 0; }
+.recent-inventory-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-4); margin-block-end: var(--space-6); }
+.recent-inventory-header h2 { margin: 0; font: 1.5rem/1.25 var(--font-display); letter-spacing: -0.02em; }
+.recent-inventory-header p { margin: var(--space-2) 0 0; color: var(--color-muted); font-size: 0.875rem; line-height: 1.6; }
+.recent-inventory-count { color: var(--color-muted); font-size: 0.75rem; line-height: 1.5; white-space: nowrap; padding-block-start: var(--space-1); }
+
+.recent-inventory-table { inline-size: 100%; border-collapse: collapse; table-layout: fixed; }
+.recent-inventory-table th, .recent-inventory-table td { padding: var(--space-4) var(--space-3); text-align: start; border-block-end: 1px solid var(--color-border); }
+.recent-inventory-table thead th { color: var(--color-muted); background: color-mix(in srgb, var(--color-border) 16%, var(--color-canvas)); font-size: 0.75rem; font-weight: 500; }
+.recent-inventory-table thead th:nth-child(1) { inline-size: 34%; }
+.recent-inventory-table thead th:nth-child(2) { inline-size: 26%; }
+.recent-inventory-table thead th:nth-child(3) { inline-size: 17%; }
+.recent-inventory-table thead th:nth-child(4) { inline-size: 23%; }
+.recent-inventory-table .recent-stock-heading, .recent-inventory-table .recent-material-stock { text-align: end; }
+.recent-material-name { font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; line-height: 1.6; }
+.recent-material-category { font-size: 0.8125rem; color: var(--color-muted); overflow-wrap: anywhere; line-height: 1.6; }
+.recent-material-stock { font-size: 0.875rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.recent-material-status { font-size: 0.75rem; }
+.recent-mobile-label { display: none; }
+.material-status { display: inline-block; padding: var(--space-1) var(--space-2); border-radius: var(--radius-control); line-height: 1.5; }
+.material-status-in { background: var(--color-canvas); border: 1px solid var(--color-border); }
+.material-status-low { background: var(--color-soft); border: 1px solid var(--color-soft); }
+.material-status-out { background: var(--color-border); border: 1px solid var(--color-border); }
+.recent-inventory-state { padding: var(--space-12) var(--space-4); border-block: 1px solid var(--color-border); text-align: center; }
+.recent-inventory-state h3 { margin: 0; font: 1.25rem/1.3 var(--font-display); }
+.recent-inventory-state p { margin: var(--space-2) 0 0; color: var(--color-muted); font-size: 0.875rem; line-height: 1.6; }
+.recent-inventory-stale-note { color: var(--color-muted); font-size: 0.75rem; margin-block-start: var(--space-4); }
+
+@media (max-width: 43.99rem) {
+  .recent-inventory-table, .recent-inventory-table tbody { display: block; }
+  .recent-inventory-table thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .recent-inventory-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: var(--space-2); padding-block: var(--space-4); border-block-start: 1px solid var(--color-border); }
+  .recent-inventory-table .recent-inventory-row > * { padding: 0; border: 0; min-inline-size: 0; }
+  .recent-material-name, .recent-material-category { grid-column: 1 / -1; }
+  .recent-inventory-table .recent-material-stock { text-align: start; align-self: center; }
+  .recent-material-status { text-align: end; align-self: center; }
+  .recent-mobile-label { display: inline; color: var(--color-muted); font-size: 0.75rem; }
+}

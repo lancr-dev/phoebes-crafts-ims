@@ -31,7 +31,7 @@
 
 .sidebar-brand-name { display: block; font: 1.2rem/1.25 var(--font-display); }
 .sidebar-brand-label { display: block; margin-block-start: var(--space-1); font-size: 0.625rem; letter-spacing: 0.06em; text-transform: uppercase; }
-.sidebar-navigation { grid-column: 1 / -1; grid-row: 2; }
+.sidebar-navigation { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 .sidebar-link,
 .sidebar-sign-out {
@@ -76,6 +76,6 @@
     border-block-end: 0;
     border-inline-end: 1px solid var(--color-border);
   }
-  .sidebar-navigation { margin-block-start: var(--space-12); }
+  .sidebar-navigation { margin-block-start: var(--space-12); flex-direction: column; }
   .sidebar-sign-out { margin-block-start: auto; }
 }

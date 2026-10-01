@@ -29,11 +29,11 @@ export default function AppLayout() {
 
   return (
     <div className="app-shell">
-      <a className="app-skip-link" href="#dashboard-content">Skip to dashboard</a>
+      <a className="app-skip-link" href="#main-content">Skip to main content</a>
       <Sidebar onSignOut={handleSignOut} isSigningOut={isSigningOut} />
       <div className="app-workspace">
         <Navbar username={admin.username} />
-        <main className="app-main" id="dashboard-content" tabIndex={-1}>
+        <main className="app-main" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
       </div>

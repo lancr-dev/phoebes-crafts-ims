@@ -4,6 +4,7 @@ import AuthProvider from './auth/AuthProvider.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import InventoryPage from './pages/InventoryPage.jsx';
 import AppLayout from './components/AppLayout.jsx';
 
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
             <Route element={<AppLayout />}>
               <Route path='/' element={<Navigate to='/dashboard' replace />} />
               <Route path='/dashboard' element={<DashboardPage />} />
+              <Route path='/inventory' element={<InventoryPage />} />
             </Route>
           </Route>
           <Route path='*' element={<Navigate to='/' replace />} />

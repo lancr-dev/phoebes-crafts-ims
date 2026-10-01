@@ -23,7 +23,28 @@ export const createInventoryItem = async (req, res) => {
 };
 
 export const getInventoryItems = async (req, res) => {
-  const { skip, limit } = parsePagination(req.query);
+  const { page, skip, limit } = parsePagination(req.query);
+  if (req.query.paginated !== undefined) {
+    if (req.query.paginated !== 'true') {
+      throw new HttpError(400, 'paginated must be true when provided');
+    }
+    // Count and select from the same aggregation; preserve the legacy array response below.
+    const [result] = await Inventory.aggregate([
+      { $sort: { createdAt: -1, _id: -1 } },
+      { $facet: {
+        items: [
+          { $skip: skip }, { $limit: limit },
+          { $project: { itemName: 1, category: 1, stock: 1, status: 1 } },
+        ],
+        totals: [{ $count: 'totalItems' }],
+      } },
+    ]);
+    const totalItems = result?.totals[0]?.totalItems ?? 0;
+    return res.status(200).json({
+      items: result?.items ?? [], currentPage: page, pageSize: limit,
+      totalItems, totalPages: Math.ceil(totalItems / limit),
+    });
+  }
   const items = await Inventory.find()
     .sort({ createdAt: -1, _id: -1 })
     .skip(skip)

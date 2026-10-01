@@ -1,7 +1,7 @@
 ﻿# Phoebe's Crafts frontend
 
 React/Vite frontend with a responsive admin login, session restoration, a protected
-inventory dashboard, and sign-out. Inventory management and logs pages remain scaffolded.
+inventory dashboard, material management, and sign-out. The logs page remains scaffolded.
 
 ## Run locally
 
@@ -63,22 +63,45 @@ On desktop, the dashboard uses sidebar navigation and a four-column totals layou
 Narrow layouts place navigation above the page, use two columns for totals, and
 stack recent material rows while retaining the name, category, stock, and status.
 
+## Inventory
+
+Open the Inventory navigation tab or `/inventory`. The page loads twenty materials
+at a time, newest first, with previous/next controls and a total count. Empty,
+loading, and failed requests have distinct states.
+
+Add materials with a name, category, and nonnegative whole starting stock. Edit
+changes the name and category only; the increase/decrease controls accept a positive
+whole quantity. This avoids replacing stock with an old value during a metadata
+edit. The backend validates stock, computes status, and records changes in transactions.
+Decrease is disabled for zero stock. Deletion requires confirmation and keeps stock
+history. Adding returns to page one; deleting the last row on a final page returns
+to the remaining last page.
+
+Axios requests use the existing session cookie. Duplicate submissions are blocked;
+uncertain results require closing the dialog to refresh before submitting again.
+Expired sessions return to login. Dialogs use native modal focus handling, Escape,
+visible field labels, and inline errors. On narrow screens, each table row stacks
+into a material entry with all four actions available.
+
 ## Checks
 
 ```powershell
 npm run build
 npm run lint
-node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js
+node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js
 ```
 
 The automated frontend checks mock HTTP responses and do not contact MongoDB or Redis.
 The existing unused React imports in the other scaffolded pages/components cause
-full lint to fail; the implemented auth and dashboard files pass lint independently.
+full lint to fail; the implemented auth, dashboard, and inventory files pass lint independently.
 
 For browser verification, check empty fields, incorrect credentials, password
 visibility, successful login, session restoration, sign-out, and an unavailable backend.
 For the dashboard, check zero totals and the empty recent list, refresh, error states,
-and session expiration. Once materials exist, compare totals and newest-first rows. Check
+and session expiration. For inventory, add/edit a material, increase/decrease stock,
+cancel and confirm deletion, and navigate multiple pages. Check that an invalid
+quantity preserves the form and that deleting the final page's only row returns
+to the preceding page. Once materials exist, compare dashboard totals and newest-first rows. Check
 keyboard navigation and widths of 320, 375, 768, 1024, and 1440 pixels, plus 200%
 zoom. The backend limits login to five requests per IP in fifteen minutes, including
 successful attempts.

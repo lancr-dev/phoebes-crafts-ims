@@ -99,6 +99,12 @@ test('recent materials retain name, category, stock, and text status in an acces
   }
   assert.match(markup, /scope="col" role="columnheader"[^>]*>Stock</);
   assert.match(markup, /<caption[^>]*>Recently added inventory materials, newest first</);
+  const largerList = Array.from({ length: 6 }, (_, index) => ({ ...materials[0], _id: String(index).padStart(24, '0'), itemName: `Material ${index + 1}` }));
+  const limited = renderToStaticMarkup(createElement(RecentInventory, { materials: largerList }));
+  assert.equal((limited.match(/class="recent-inventory-row"/g) || []).length, 5);
+  assert.match(limited, /5 most recent/);
+  assert.match(limited, /Material 5/);
+  assert.doesNotMatch(limited, /Material 6/);
 });
 
 test('recent materials handle empty, loading, unavailable, and stale states', () => {

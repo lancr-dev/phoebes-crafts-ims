@@ -27,7 +27,7 @@ export const getDashboard = async () => {
           { $project: { _id: 0 } },
         ],
         recentMaterials: [
-          { $limit: 6 },
+          { $limit: 5 },
           { $project: { itemName: 1, category: 1, stock: 1, status: 1, createdAt: 1 } },
         ],
       },

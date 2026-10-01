@@ -5,7 +5,7 @@ import '../styles/logs-table.css';
 
 const tables = {
   recent: {
-    tableClass: 'recent-inventory-table', rowClass: 'recent-inventory-row', label: 'Loading recent materials…',
+    tableClass: 'recent-inventory-table', rowClass: 'recent-inventory-row', label: 'Loading recent materials…', rowCount: 5,
     columns: [
       { label: 'Material', className: 'recent-material-name', shape: 'skeleton-line-long' },
       { label: 'Category', className: 'recent-material-category', shape: 'skeleton-line-short' },
@@ -37,7 +37,7 @@ const tables = {
 };
 
 export default function TableSkeleton({ variant = 'inventory' }) {
-  const { tableClass, rowClass, label, columns } = tables[variant];
+  const { tableClass, rowClass, label, columns, rowCount = 6 } = tables[variant];
   return (
     <>
       <p className="visually-hidden" role="status">{label}</p>
@@ -46,7 +46,7 @@ export default function TableSkeleton({ variant = 'inventory' }) {
           <tr>{columns.map((column) => <th key={column.label} scope="col" className={column.headingClass}>{column.label}</th>)}</tr>
         </thead>
         <tbody>
-          {Array.from({ length: 6 }, (_, row) => (
+          {Array.from({ length: rowCount }, (_, row) => (
             <tr className={rowClass} key={row}>
               {columns.map((column) => (
                 <td key={column.label} className={column.className}>

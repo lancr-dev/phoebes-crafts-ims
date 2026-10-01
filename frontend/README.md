@@ -68,7 +68,7 @@ Frontend cooldowns do not replace backend enforcement or store any credentials.
 
 The dashboard calls `GET /api/inventory/dashboard` through the shared Axios client.
 The authenticated backend endpoint uses one MongoDB aggregation to return counts
-for all materials and the six most recently created materials. It follows the
+for all materials and the five most recently created materials. It follows the
 backend's saved stock statuses and returns only the recent fields needed by the UI.
 
 The response contains `summary` (`totalMaterials`, `inStockMaterials`,
@@ -144,8 +144,8 @@ history disables both export and clearing. Expired sessions return to login.
 ## Loading states
 
 Reusable CSS skeletons show dashboard totals, recently added materials, inventory
-rows, and log rows while their data is loading. Six decorative table rows provide
-a preview of the upcoming layout; actual inventory and logs pagination stays at
+rows, and log rows while their data is loading. Five decorative rows preview recent
+materials; six preview inventory and logs. Actual inventory and logs pagination stays at
 twenty records per page. Category loading and session checks also show placeholders.
 The table skeletons reuse the existing responsive row layouts, including stacked
 mobile entries. Dashboard refresh keeps previously loaded data visible.

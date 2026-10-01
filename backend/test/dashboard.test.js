@@ -60,13 +60,13 @@ test('dashboard requires a session before querying inventory', async () => {
 
 test('dashboard route returns global counts and recent materials with credentials', async () => {
   const summary = { totalMaterials: 26, inStockMaterials: 15, lowStockMaterials: 8, outOfStockMaterials: 3 };
-  const recentMaterials = Array.from({ length: 6 }, (_, index) => ({
+  const recentMaterials = Array.from({ length: 5 }, (_, index) => ({
     _id: (index + 1).toString(16).padStart(24, '0'),
     itemName: `Material ${index + 1}`,
     category: 'Craft supplies',
     stock: 12,
     status: 'In Stock',
-    createdAt: new Date(Date.UTC(2026, 9, 1, 0, 0, 6 - index)).toISOString(),
+    createdAt: new Date(Date.UTC(2026, 9, 1, 0, 0, 5 - index)).toISOString(),
   }));
   aggregationResult = [{ summary: [summary], recentMaterials }];
   const response = await request();
@@ -74,6 +74,9 @@ test('dashboard route returns global counts and recent materials with credential
   assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.equal(response.headers.get('access-control-allow-origin'), process.env.FRONTEND_ORIGIN);
   assert.deepEqual(await response.json(), { summary, recentMaterials });
+  const [pipeline] = aggregate.mock.calls.at(-1).arguments;
+  assert.deepEqual(pipeline[0], { $sort: { createdAt: -1, _id: -1 } });
+  assert.deepEqual(pipeline[1].$facet.recentMaterials[0], { $limit: 5 });
 });
 
 test('an empty inventory returns zero totals and an empty recent list', async () => {

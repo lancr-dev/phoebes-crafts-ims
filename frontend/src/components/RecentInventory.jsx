@@ -8,6 +8,7 @@ const statusClasses = {
 };
 
 export default function RecentInventory({ materials, isLoading, isUnavailable }) {
+  const recentMaterials = materials?.slice(0, 5);
   return (
     <section className="recent-inventory" aria-labelledby="recent-inventory-title" aria-busy={isLoading}>
       <header className="recent-inventory-header">
@@ -15,13 +16,13 @@ export default function RecentInventory({ materials, isLoading, isUnavailable })
           <h2 id="recent-inventory-title">Recently added materials</h2>
           <p>The latest materials added to your inventory.</p>
         </div>
-        {materials?.length > 0 && <span className="recent-inventory-count">{materials.length} most recent</span>}
+        {recentMaterials?.length > 0 && <span className="recent-inventory-count">{recentMaterials.length} most recent</span>}
       </header>
-      {!materials && isLoading ? <TableSkeleton variant="recent" /> : !materials ? (
+      {!recentMaterials && isLoading ? <TableSkeleton variant="recent" /> : !recentMaterials ? (
         <div className="recent-inventory-state" role="status">
           <p>Recent materials are unavailable.</p>
         </div>
-      ) : materials.length === 0 ? (
+      ) : recentMaterials.length === 0 ? (
         <div className="recent-inventory-state">
           <h3>No materials yet.</h3>
           <p>Materials will appear here when they’re added to inventory.</p>
@@ -39,7 +40,7 @@ export default function RecentInventory({ materials, isLoading, isUnavailable })
             </tr>
           </thead>
           <tbody role="rowgroup">
-            {materials.map((item) => (
+            {recentMaterials.map((item) => (
               <tr key={item._id} className="recent-inventory-row" role="row">
                 <th scope="row" role="rowheader" className="recent-material-name">{item.itemName}</th>
                 <td role="cell" className="recent-material-category">{item.category}</td>

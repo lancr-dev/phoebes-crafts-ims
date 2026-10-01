@@ -46,7 +46,7 @@ node --test test/cors.test.js
 
 `GET /api/inventory/dashboard` requires the existing admin session. It returns
 `summary` with `totalMaterials`, `inStockMaterials`, `lowStockMaterials`, and
-`outOfStockMaterials`, plus `recentMaterials` with the six newest materials by
+`outOfStockMaterials`, plus `recentMaterials` with the five newest materials by
 `createdAt` and `_id`. Each recent material contains `_id`, `itemName`, `category`,
 `stock`, `status`, and `createdAt`.
 

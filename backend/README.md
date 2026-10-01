@@ -62,10 +62,35 @@ The metadata response is opt-in. Omitting `paginated` preserves the existing arr
 response for older clients; an invalid `paginated` value returns 400. Existing
 create/edit/delete/stock routes and transactional stock history remain unchanged.
 
-Run the configuration security, CORS, dashboard, and pagination route checks with:
+## Inventory logs API
+
+`GET /api/inventory/logs/all?paginated=true&page=1&limit=20` returns
+`{ logs, currentPage, pageSize, totalLogs, totalPages, clearThrough }`. The log
+fields are `_id`, `createdAt`, `itemName`, `actionType` (`ADD`/`REMOVE`), `quantity`,
+`previousStock`, and `newStock`. One aggregation selects and counts the same input,
+sorted by `createdAt` and `_id` descending. `clearThrough` contains `throughId`
+and `throughCreatedAt` for the newest record globally, including when viewing a
+later page. It is null for empty history. Saved names are used without looking up
+current inventory names. Omitting `paginated` preserves the original list response.
+
+`GET /api/inventory/logs/export` still streams a JSON array through a bounded cursor.
+Supplying `throughId` and `throughCreatedAt` limits the export to the same captured
+history. The frontend uses this data for PDF generation. Without a boundary, the
+original full JSON export and populated inventory references remain available.
+
+`DELETE /api/inventory/logs/all` now supports the requested Clear logs action;
+bulk deletion was previously disabled. It requires the existing admin session and
+trusted-origin checks plus a JSON body containing `confirm: "CLEAR"`, `throughId`,
+and an ISO UTC `throughCreatedAt`. Invalid or missing boundaries fail before
+deletion. Only records ordered at or before that date/ID are deleted, preserving
+newer stock movements. The response contains `message` and `deletedCount`.
+Repeating a request for the same boundary is safe. This permanently deletes
+history only and does not alter inventory stock. No schema migration is required.
+
+Run the configuration security, CORS, dashboard, pagination, and logs checks with:
 
 ```sh
-node --test --test-concurrency=1 test/configSecurity.test.js test/cors.test.js test/dashboard.test.js test/inventoryPagination.test.js
+node --test --test-concurrency=1 test/configSecurity.test.js test/cors.test.js test/dashboard.test.js test/inventoryPagination.test.js test/logs.test.js
 ```
 
-These checks mock Redis and inventory aggregation and do not modify the database.
+These checks mock Redis and database operations and do not modify live data.

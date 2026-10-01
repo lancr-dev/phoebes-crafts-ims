@@ -15,7 +15,7 @@ export default function Modal({ title, titleId, onClose, isPending, children }) 
     return () => {
       dialog.close();
       document.body.style.overflow = previousOverflow;
-      if (previousFocus?.isConnected) previousFocus.focus();
+      if (previousFocus?.isConnected && !previousFocus.disabled) previousFocus.focus();
       else document.getElementById('main-content')?.focus();
     };
   }, []);

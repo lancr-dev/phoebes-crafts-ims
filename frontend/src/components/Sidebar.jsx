@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Package } from 'lucide-react';
+import { History, LayoutDashboard, LogOut, Package } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import '../styles/sidebar.css';
 
@@ -20,6 +20,10 @@ const Sidebar = ({ onSignOut, isSigningOut }) => {
         <NavLink to="/inventory" className={({ isActive }) => `sidebar-link${isActive ? ' sidebar-link-active' : ''}`}>
           <Package size={19} aria-hidden="true" />
           Inventory
+        </NavLink>
+        <NavLink to="/logs" className={({ isActive }) => `sidebar-link${isActive ? ' sidebar-link-active' : ''}`}>
+          <History size={19} aria-hidden="true" />
+          Inventory logs
         </NavLink>
       </nav>
       <button className="sidebar-sign-out" type="button" onClick={onSignOut} disabled={isSigningOut}>

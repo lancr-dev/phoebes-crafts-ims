@@ -3,6 +3,8 @@ import { pipeline } from 'node:stream/promises';
 import Inventory from '../models/Inventory.js';
 import InventoryLog from '../models/InventoryLog.js';
 import { getDashboard } from '../services/dashboardService.js';
+import { getLogsPage, clearLogs } from '../services/logService.js';
+import { parseLogBoundary, parseClearLogsInput } from '../utils/logValidation.js';
 import {
   createItem,
   updateItem,
@@ -89,6 +91,10 @@ export const decreaseStock = async (req, res) => {
 
 export const getInventoryLogs = async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
+  if (req.query.paginated !== undefined) {
+    if (req.query.paginated !== 'true') throw new HttpError(400, 'paginated must be true when provided');
+    return res.status(200).json(await getLogsPage({ page, limit, skip }));
+  }
   const totalLogs = await InventoryLog.countDocuments();
   const logs = await InventoryLog.find()
     .populate('inventoryId', 'itemName')
@@ -103,13 +109,14 @@ export const getInventoryLogs = async (req, res) => {
   });
 };
 
-export const deleteInventoryLogs = (_req, _res) => {
-  throw new HttpError(403, 'Bulk log deletion is disabled');
+export const deleteInventoryLogs = async (req, res) => {
+  res.status(200).json(await clearLogs(parseClearLogsInput(req.body)));
 };
 
-export const exportInventoryLogs = async (_req, res) => {
-  const cursor = InventoryLog.find()
-    .populate('inventoryId', 'itemName')
+export const exportInventoryLogs = async (req, res) => {
+  const filter = parseLogBoundary(req.query);
+  const query = InventoryLog.find(filter);
+  const cursor = (Object.keys(filter).length ? query.select('createdAt itemName actionType quantity previousStock newStock') : query.populate('inventoryId', 'itemName'))
     .sort({ createdAt: -1, _id: -1 })
     .lean()
     .cursor({ batchSize: 100 });

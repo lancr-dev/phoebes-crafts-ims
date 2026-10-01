@@ -1,7 +1,7 @@
 ﻿# Phoebe's Crafts frontend
 
 React/Vite frontend with a responsive admin login, session restoration, a protected
-inventory dashboard, material management, and sign-out. The logs page remains scaffolded.
+inventory dashboard, material management, stock movement logs, and sign-out.
 
 ## Run locally
 
@@ -83,17 +83,44 @@ Expired sessions return to login. Dialogs use native modal focus handling, Escap
 visible field labels, and inline errors. On narrow screens, each table row stacks
 into a material entry with all four actions available.
 
+## Inventory logs
+
+Open Inventory logs in navigation or `/logs`. Twenty records appear per page,
+newest first, with date/time, the saved material name, Stock in/Stock out, quantity,
+and before/after quantities. Times use `Asia/Manila` (UTC+08:00). The saved name is
+retained after a material is renamed or deleted. Narrow layouts stack rows and keep
+all six columns' information visible.
+
+Download PDF exports the entire history captured when the page loaded, across all
+pages. It requests the existing streamed JSON export through the captured newest
+record, validates it, and creates a landscape A4 report with repeated headers and
+page numbers. An export fails visibly if history was cleared before the report was
+received. The PDF libraries and font load only when downloading; generating very
+large reports uses browser memory in proportion to the exported history.
+
+PDF generation uses jsPDF and jsPDF-AutoTable. The bundled Noto Sans Regular font
+comes from <https://github.com/notofonts/noto-fonts> and retains its SIL Open Font
+License in `src/assets/NotoSans-LICENSE.txt`.
+
+Clear logs opens a confirmation dialog for the captured history, across all pages.
+It does not change materials or stock quantities. The backend requires the admin
+session, trusted browser origin, explicit confirmation, and a date/ID boundary;
+newer history is kept. Duplicate submissions are blocked. After a failed clear,
+closing the dialog refreshes history before another attempt. Empty or unavailable
+history disables both export and clearing. Expired sessions return to login.
+
 ## Checks
 
 ```powershell
 npm run build
 npm run lint
-node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js
+node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js test/logs.test.js
 ```
 
 The automated frontend checks mock HTTP responses and do not contact MongoDB or Redis.
-The existing unused React imports in the other scaffolded pages/components cause
-full lint to fail; the implemented auth, dashboard, and inventory files pass lint independently.
+The checks cover authentication, dashboards, materials, logs, API contracts,
+pagination, validation, semantic rendering, and real PDF generation. Full lint
+includes every implemented page and component.
 
 For browser verification, check empty fields, incorrect credentials, password
 visibility, successful login, session restoration, sign-out, and an unavailable backend.
@@ -101,7 +128,11 @@ For the dashboard, check zero totals and the empty recent list, refresh, error s
 and session expiration. For inventory, add/edit a material, increase/decrease stock,
 cancel and confirm deletion, and navigate multiple pages. Check that an invalid
 quantity preserves the form and that deleting the final page's only row returns
-to the preceding page. Once materials exist, compare dashboard totals and newest-first rows. Check
+to the preceding page. For logs, check a Stock in and Stock out movement, Manila
+timestamps, pagination beyond twenty records, and downloading a PDF with all pages.
+Confirm clearing only when you intend to remove that history; test cancelling first
+and confirm stock quantities stay unchanged. Once materials exist, compare
+dashboard totals and newest-first rows. Check
 keyboard navigation and widths of 320, 375, 768, 1024, and 1440 pixels, plus 200%
 zoom. The backend limits login to five requests per IP in fifteen minutes, including
 successful attempts.

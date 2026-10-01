@@ -4,12 +4,7 @@ export const getAuthError = (error, { action = 'sign in', offline = false } = {}
     return 'The request took too long. Please try again.';
   }
   if (error.response?.status === 429) {
-    const seconds = Number(error.response.headers?.['retry-after']);
-    if (Number.isFinite(seconds) && seconds > 0) {
-      const minutes = Math.ceil(seconds / 60);
-      return `Too many requests. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
-    }
-    return 'Too many requests. Please wait before trying again.';
+    return 'Too many requests. Please try again when the countdown finishes.';
   }
   if (error.response?.status === 401) return 'The username or password is incorrect.';
   if (error.response?.status === 403) {

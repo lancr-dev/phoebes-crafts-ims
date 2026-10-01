@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router';
 import useAuth from '../hooks/useAuth.js';
 import AuthLayout from './AuthLayout.jsx';
+import AuthSkeleton from './AuthSkeleton.jsx';
 
 export default function ProtectedRoute() {
   const { admin, isChecking } = useAuth();
@@ -8,7 +9,7 @@ export default function ProtectedRoute() {
     return (
       <AuthLayout>
         <h1 className="auth-title">Welcome back.</h1>
-        <p className="auth-description" role="status">Checking your session…</p>
+        <AuthSkeleton />
       </AuthLayout>
     );
   }

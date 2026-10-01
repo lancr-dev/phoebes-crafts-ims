@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PackageOpen, Plus, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InventoryTable from '../components/InventoryTable.jsx';
+import TableSkeleton from '../components/TableSkeleton.jsx';
 import InventoryPagination from '../components/InventoryPagination.jsx';
 import InventoryModal from '../components/InventoryModal.jsx';
 import StockAdjustmentModal from '../components/StockAdjustmentModal.jsx';
@@ -10,6 +11,7 @@ import CategoryFilter from '../components/CategoryFilter.jsx';
 import useInventory from '../hooks/useInventory.js';
 import useInventoryCategories from '../hooks/useInventoryCategories.js';
 import useAuth from '../hooks/useAuth.js';
+import useRateLimit from '../hooks/useRateLimit.js';
 import { createInventoryItem, updateInventoryItem, adjustInventoryStock, deleteInventoryItem } from '../services/inventoryApi.js';
 import { getInventoryError, requiresInventoryRefresh } from '../utils/inventoryData.js';
 import '../styles/inventory-page.css';
@@ -18,6 +20,7 @@ export default function InventoryPage() {
   const { data, page, category, isLoading, error, loadPage, changeCategory } = useInventory();
   const categoryData = useInventoryCategories();
   const { expireSession } = useAuth();
+  const { isRateLimited } = useRateLimit();
   const [dialog, setDialog] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [mutationError, setMutationError] = useState('');
@@ -31,7 +34,7 @@ export default function InventoryPage() {
   }, []);
 
   const openDialog = (type, item = null) => {
-    if (pendingRef.current) return;
+    if (pendingRef.current || isRateLimited) return;
     setMutationError('');
     setMustRefresh(false);
     setDialog({ type, item });
@@ -47,7 +50,7 @@ export default function InventoryPage() {
   };
 
   const saveChange = async (input) => {
-    if (pendingRef.current || mustRefresh || !dialog) return;
+    if (pendingRef.current || mustRefresh || !dialog || isRateLimited) return;
     pendingRef.current = true;
     setIsPending(true);
     setMutationError('');
@@ -75,14 +78,14 @@ export default function InventoryPage() {
       const message = getInventoryError(failure, { mutation: true, offline: !navigator.onLine });
       setMustRefresh(blocked);
       setMutationError(blocked ? `${message} Inventory will refresh when you close this dialog.` : message);
-      toast.error(message, { id: 'inventory-change' });
+      if (failure.response?.status !== 429) toast.error(message, { id: 'inventory-change' });
     } finally {
       pendingRef.current = false;
       if (mountedRef.current) setIsPending(false);
     }
   };
 
-  const modalProps = { onClose: closeDialog, isPending, error: mutationError, isSubmitDisabled: mustRefresh };
+  const modalProps = { onClose: closeDialog, isPending, error: mutationError, isSubmitDisabled: mustRefresh || isRateLimited };
 
   return (
     <div className="inventory-page">
@@ -93,33 +96,33 @@ export default function InventoryPage() {
           <p className="inventory-introduction">Manage your materials, one stock change at a time.</p>
         </div>
         <div className="inventory-heading-actions">
-          <button className="inventory-button" type="button" onClick={() => { loadPage(); categoryData.refresh(); }} disabled={isLoading || isPending}>
+          <button className="inventory-button" type="button" onClick={() => { loadPage(); categoryData.refresh(); }} disabled={isLoading || isPending || isRateLimited}>
             <RefreshCw size={16} aria-hidden="true" />Refresh
           </button>
-          <button className="inventory-button inventory-button-primary" type="button" onClick={() => openDialog('add')} disabled={isLoading || isPending || Boolean(error)}>
+          <button className="inventory-button inventory-button-primary" type="button" onClick={() => openDialog('add')} disabled={isLoading || isPending || isRateLimited || Boolean(error)}>
             <Plus size={18} aria-hidden="true" />Add new material
           </button>
         </div>
       </header>
 
       <CategoryFilter category={category} categories={categoryData.categories} isLoading={categoryData.isLoading}
-        error={categoryData.error} onChange={changeCategory} onRetry={categoryData.refresh} disabled={isPending} />
+        error={categoryData.error} onChange={changeCategory} onRetry={categoryData.refresh} disabled={isPending || isRateLimited} />
 
       {error && <div className="inventory-page-error" role="alert"><p>{error}</p><p>Use Refresh to try again.</p></div>}
 
       <section className="inventory-list" aria-label="Inventory materials" aria-busy={isLoading}>
-        {!data ? (
-          <div className="inventory-state" role="status"><p>{isLoading ? 'Loading materials…' : 'Materials are unavailable.'}</p></div>
+        {isLoading ? <TableSkeleton /> : !data ? (
+          <div className="inventory-state" role="status"><p>Materials are unavailable.</p></div>
         ) : data.items.length === 0 ? (
           <div className="inventory-state">
             <PackageOpen size={28} aria-hidden="true" />
             <h2>{category ? 'No materials in this category.' : 'No materials yet.'}</h2>
             <p>{category ? 'Choose another category or clear the filter to see all materials.' : 'Add your first material to start tracking stock.'}</p>
           </div>
-        ) : <InventoryTable items={data.items} onAction={openDialog} disabled={isPending || isLoading} />}
+        ) : <InventoryTable items={data.items} onAction={openDialog} disabled={isPending || isLoading || isRateLimited} />}
       </section>
 
-      <InventoryPagination data={data} page={page} isLoading={isLoading} onPageChange={loadPage} disabled={isPending || isLoading} />
+      <InventoryPagination data={data} page={page} isLoading={isLoading} onPageChange={loadPage} disabled={isPending || isLoading || isRateLimited} />
 
       {dialog && ['add', 'edit'].includes(dialog.type) && <InventoryModal item={dialog.item} onSave={saveChange} {...modalProps} />}
       {dialog && ['increase', 'decrease'].includes(dialog.type) && <StockAdjustmentModal item={dialog.item} direction={dialog.type} onSave={saveChange} {...modalProps} />}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import RateLimitNotice from './RateLimitNotice.jsx';
 import '../styles/inventory-modal.css';
 
 export default function Modal({ title, titleId, onClose, isPending, children }) {
@@ -29,6 +30,7 @@ export default function Modal({ title, titleId, onClose, isPending, children }) 
           <X size={20} aria-hidden="true" />
         </button>
       </header>
+      <RateLimitNotice />
       {children}
     </dialog>
   );

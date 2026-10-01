@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import useAuth from './useAuth.js';
 import { getInventoryCategories } from '../services/inventoryApi.js';
+import { getInventoryError } from '../utils/inventoryData.js';
 
 export default function useInventoryCategories() {
   const { expireSession } = useAuth();
@@ -27,9 +28,9 @@ export default function useInventoryCategories() {
           toast.error('Your session has expired. Please sign in again.', { id: 'session-expired' });
           return;
         }
-        const message = 'Could not load categories. Try again.';
+        const message = failure.response?.status === 429 ? getInventoryError(failure) : 'Could not load categories. Try again.';
         setError(message);
-        toast.error(message, { id: 'inventory-categories-error' });
+        if (failure.response?.status !== 429) toast.error(message, { id: 'inventory-categories-error' });
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }

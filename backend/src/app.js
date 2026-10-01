@@ -16,7 +16,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type'],
-    exposedHeaders: ['Content-Disposition', 'Retry-After'],
+    exposedHeaders: ['Content-Disposition', 'Retry-After', 'X-RateLimit-Scope'],
   }),
 );
 app.use(express.json());

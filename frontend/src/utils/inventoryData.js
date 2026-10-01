@@ -60,7 +60,7 @@ export const validateAdjustment = (value, item, direction) => {
 export const getInventoryError = (error, { mutation = false, offline = false } = {}) => {
   if (offline) return mutation ? "You're offline. Reconnect and refresh inventory before trying again." : "You're offline. Reconnect, then refresh inventory.";
   const status = error.response?.status;
-  if (status === 429) return 'Too many requests. Wait a moment, then try again.';
+  if (status === 429) return 'Too many requests. Please try again when the countdown finishes.';
   if (status === 403) return 'You do not have permission to perform this action.';
   if (status === 404) return 'This material no longer exists. Close this dialog and refresh inventory.';
   if (status === 409) return 'This material changed. Close this dialog and refresh before trying again.';

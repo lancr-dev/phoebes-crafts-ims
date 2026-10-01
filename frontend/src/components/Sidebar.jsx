@@ -2,7 +2,7 @@ import { History, LayoutDashboard, LogOut, Package } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import '../styles/sidebar.css';
 
-const Sidebar = ({ onSignOut, isSigningOut }) => {
+const Sidebar = ({ onSignOut, isSigningOut, isSignOutDisabled }) => {
   return (
     <aside className="app-sidebar" aria-label="Workspace">
       <Link className="sidebar-brand" to="/dashboard" aria-label="Phoebe's Crafts dashboard">
@@ -26,7 +26,7 @@ const Sidebar = ({ onSignOut, isSigningOut }) => {
           Inventory logs
         </NavLink>
       </nav>
-      <button className="sidebar-sign-out" type="button" onClick={onSignOut} disabled={isSigningOut}>
+      <button className="sidebar-sign-out" type="button" onClick={onSignOut} disabled={isSigningOut || isSignOutDisabled}>
         <LogOut size={18} aria-hidden="true" />
         {isSigningOut ? 'Signing out…' : 'Sign out'}
       </button>

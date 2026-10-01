@@ -2,10 +2,12 @@ import { RefreshCw } from 'lucide-react';
 import DashboardCards from '../components/DashboardCards.jsx';
 import RecentInventory from '../components/RecentInventory.jsx';
 import useDashboard from '../hooks/useDashboard.js';
+import useRateLimit from '../hooks/useRateLimit.js';
 import '../styles/dashboard-page.css';
 
 const DashboardPage = () => {
   const { data, isLoading, error, updatedAt, refresh } = useDashboard();
+  const { isRateLimited } = useRateLimit();
   const updatedTime = updatedAt && new Intl.DateTimeFormat('en-PH', {
     hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila',
   }).format(updatedAt);
@@ -19,7 +21,7 @@ const DashboardPage = () => {
           <p className="dashboard-introduction">A clear view of your materials and stock.</p>
         </div>
         <div className="dashboard-refresh-controls">
-          <button className="dashboard-refresh" type="button" onClick={refresh} disabled={isLoading}>
+          <button className="dashboard-refresh" type="button" onClick={refresh} disabled={isLoading || isRateLimited}>
             <RefreshCw size={16} aria-hidden="true" />
             {isLoading ? 'Updating…' : 'Refresh'}
           </button>

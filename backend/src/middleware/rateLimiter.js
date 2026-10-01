@@ -27,6 +27,8 @@ const createRateLimiter = ({ prefix, windowSeconds, maxRequests }) => async (req
   const [requests, ttl] = counter;
   if (requests > maxRequests) {
     res.set('Retry-After', String(Math.max(ttl, 1)));
+    res.set('X-RateLimit-Scope', prefix);
+    res.set('Cache-Control', 'no-store');
     return res.status(429).json({
       message: 'Too many requests. Please try again later.',
     });

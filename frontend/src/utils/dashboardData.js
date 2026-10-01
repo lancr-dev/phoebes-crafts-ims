@@ -21,7 +21,7 @@ export const parseDashboard = (data) => {
 
 export const getDashboardError = (error, offline = false) => {
   if (offline) return "You're offline. Reconnect, then refresh the dashboard.";
-  if (error.response?.status === 429) return 'Too many requests. Wait a moment, then try again.';
+  if (error.response?.status === 429) return 'Too many requests. Please try again when the countdown finishes.';
   if (error.response?.status === 403) return 'You do not have permission to view the dashboard.';
   if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
     return 'The dashboard took too long to load. Please try again.';

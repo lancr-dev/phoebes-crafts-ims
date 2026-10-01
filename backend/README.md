@@ -21,8 +21,15 @@ If the setting is absent, cross-origin browser access is disabled.
 
 CORS permits that origin with cookie credentials and handles preflight requests
 before authentication and rate limiting. API requests still require the existing
-authentication and trusted-origin checks. `Content-Disposition` and `Retry-After`
-are exposed for downloads and rate-limit handling.
+authentication and trusted-origin checks. `Content-Disposition`, `Retry-After`,
+and `X-RateLimit-Scope` are exposed for downloads and rate-limit handling.
+
+The global limiter allows 100 API requests per IP per minute. The login route also
+allows 5 attempts per IP per fifteen minutes, including successful attempts. A
+`429` includes `Retry-After` in seconds and `X-RateLimit-Scope: api` or `login` so
+the frontend can pause the appropriate requests. These responses use
+`Cache-Control: no-store` to avoid reusing stale cooldowns. Redis failure still returns 503 and does
+not bypass rate limiting. Limits and authentication remain enforced on the backend.
 
 The frontend must send credentials (`withCredentials: true` in Axios or
 `credentials: 'include'` in fetch). The session cookie uses `SameSite=Strict`, so

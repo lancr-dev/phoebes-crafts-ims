@@ -1,0 +1,27 @@
+.skeleton { display: inline-block; inline-size: 100%; max-inline-size: 100%; block-size: 0.875rem; vertical-align: middle; border-radius: var(--radius-control); background: color-mix(in srgb, var(--color-border) 70%, var(--color-canvas)); animation: skeleton-pulse 1.6s ease-in-out infinite; }
+.skeleton-line-long { inline-size: 80%; }
+.skeleton-line-short { inline-size: 60%; }
+.skeleton-number { inline-size: 3ch; }
+.skeleton-stat { display: block; inline-size: 3ch; block-size: 1.15em; }
+.skeleton-badge { inline-size: 6.5rem; block-size: 1.75rem; }
+.skeleton-control { flex: 0 0 auto; inline-size: 2.75rem; block-size: 2.75rem; }
+.skeleton-timestamp { display: grid; gap: var(--space-2); }
+.skeleton-mobile-label { inline-size: 3rem; block-size: 0.625rem; }
+.skeleton-field-label { inline-size: 6rem; }
+.skeleton-input { display: block; block-size: 3.25rem; }
+.auth-skeleton-fields { display: grid; gap: var(--space-6); margin-block-start: var(--space-8); }
+.auth-skeleton-field { display: grid; gap: var(--space-2); }
+.auth-session-skeleton { margin-block-start: var(--space-4); }
+.auth-session-skeleton .skeleton { inline-size: 45%; block-size: 0.375rem; }
+.inventory-filter-loading { display: grid; flex: 1 1 16rem; gap: var(--space-2); }
+.inventory-filter-loading .skeleton { inline-size: min(12rem, 100%); }
+
+@keyframes skeleton-pulse { 50% { opacity: 0.45; } }
+
+@container logs-list (max-width: 52rem) {
+  .skeleton-timestamp { inline-size: min(100%, 12rem); grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

@@ -1,3 +1,4 @@
+import TableSkeleton from './TableSkeleton.jsx';
 import '../styles/recent-inventory.css';
 
 const statusClasses = {
@@ -16,9 +17,9 @@ export default function RecentInventory({ materials, isLoading, isUnavailable })
         </div>
         {materials?.length > 0 && <span className="recent-inventory-count">{materials.length} most recent</span>}
       </header>
-      {!materials ? (
+      {!materials && isLoading ? <TableSkeleton variant="recent" /> : !materials ? (
         <div className="recent-inventory-state" role="status">
-          <p>{isLoading ? 'Loading recent materials…' : 'Recent materials are unavailable.'}</p>
+          <p>Recent materials are unavailable.</p>
         </div>
       ) : materials.length === 0 ? (
         <div className="recent-inventory-state">

@@ -1,3 +1,4 @@
+import Skeleton from './Skeleton.jsx';
 import '../styles/dashboard-card.css';
 
 const metrics = [
@@ -14,8 +15,10 @@ const DashboardCards = ({ summary, isLoading }) => {
         <div className={`dashboard-stat ${className}`} key={key}>
           <dt className="dashboard-stat-label">{label}</dt>
           <dd className="dashboard-stat-value">
-            {summary ? new Intl.NumberFormat('en-PH').format(summary[key]) : (
-              <><span aria-hidden="true">—</span><span className="visually-hidden">{isLoading ? 'Loading' : 'Unavailable'}</span></>
+            {summary ? new Intl.NumberFormat('en-PH').format(summary[key]) : isLoading ? (
+              <><Skeleton className="skeleton-stat" /><span className="visually-hidden">Loading</span></>
+            ) : (
+              <><span aria-hidden="true">—</span><span className="visually-hidden">Unavailable</span></>
             )}
           </dd>
           <dd className="dashboard-stat-description">{description}</dd>

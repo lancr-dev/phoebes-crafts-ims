@@ -3,7 +3,9 @@ import { Download, History, RefreshCw, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useLogs from '../hooks/useLogs.js';
 import useAuth from '../hooks/useAuth.js';
+import useRateLimit from '../hooks/useRateLimit.js';
 import LogsTable from '../components/LogsTable.jsx';
+import TableSkeleton from '../components/TableSkeleton.jsx';
 import InventoryPagination from '../components/InventoryPagination.jsx';
 import ClearLogsModal from '../components/ClearLogsModal.jsx';
 import { clearInventoryLogs, exportInventoryLogs } from '../services/logApi.js';
@@ -15,6 +17,7 @@ import '../styles/logs-page.css';
 export default function LogsPage() {
   const { data, page, isLoading, error, loadPage } = useLogs();
   const { expireSession } = useAuth();
+  const { isRateLimited } = useRateLimit();
   const [operation, setOperation] = useState('');
   const [isClearOpen, setIsClearOpen] = useState(false);
   const [clearError, setClearError] = useState('');
@@ -35,11 +38,11 @@ export default function LogsPage() {
     }
     const message = getLogsError(failure, { action, offline: !navigator.onLine });
     if (action === 'clear') setClearError(message);
-    toast.error(message, { id: 'logs-operation' });
+    if (failure.response?.status !== 429) toast.error(message, { id: 'logs-operation' });
   };
 
   const downloadPdf = async () => {
-    if (busyRef.current || !data?.totalLogs) return;
+    if (busyRef.current || !data?.totalLogs || isRateLimited) return;
     busyRef.current = true;
     setOperation('export');
     const controller = new AbortController();
@@ -59,7 +62,7 @@ export default function LogsPage() {
   };
 
   const confirmClear = async () => {
-    if (busyRef.current || clearError || !isClearOpen || !data?.clearThrough) return;
+    if (busyRef.current || clearError || !isClearOpen || !data?.clearThrough || isRateLimited) return;
     busyRef.current = true;
     setOperation('clear');
     try {
@@ -93,13 +96,13 @@ export default function LogsPage() {
           <p className="inventory-introduction">Every stock change, with quantities before and after.</p>
         </div>
         <div className="logs-heading-actions">
-          <button className="inventory-button" type="button" onClick={() => loadPage()} disabled={isLoading || isBusy}>
+          <button className="inventory-button" type="button" onClick={() => loadPage()} disabled={isLoading || isBusy || isRateLimited}>
             <RefreshCw size={16} aria-hidden="true" />Refresh
           </button>
-          <button className="inventory-button inventory-button-primary" type="button" onClick={downloadPdf} disabled={isLoading || isBusy || !hasLogs}>
+          <button className="inventory-button inventory-button-primary" type="button" onClick={downloadPdf} disabled={isLoading || isBusy || isRateLimited || !hasLogs}>
             <Download size={17} aria-hidden="true" />{operation === 'export' ? 'Preparing PDF…' : 'Download PDF'}
           </button>
-          <button className="inventory-button logs-clear-button" type="button" onClick={() => { setClearError(''); setIsClearOpen(true); }} disabled={isLoading || isBusy || !hasLogs}>
+          <button className="inventory-button logs-clear-button" type="button" onClick={() => { setClearError(''); setIsClearOpen(true); }} disabled={isLoading || isBusy || isRateLimited || !hasLogs}>
             <Trash2 size={16} aria-hidden="true" />Clear logs
           </button>
         </div>
@@ -111,13 +114,13 @@ export default function LogsPage() {
         <p role="status">{operation === 'export' ? 'Preparing the captured history across all pages…' : 'Newest movements first'}</p>
       </div>
       <section className="logs-list" aria-label="Stock movement logs" aria-busy={isLoading}>
-        {!data ? <div className="inventory-state" role="status"><p>{isLoading ? 'Loading stock movements…' : 'Stock movements are unavailable.'}</p></div>
+        {isLoading ? <TableSkeleton variant="logs" /> : !data ? <div className="inventory-state" role="status"><p>Stock movements are unavailable.</p></div>
           : data.logs.length === 0 ? <div className="inventory-state"><History size={28} aria-hidden="true" /><h2>No stock movements yet.</h2><p>Stock changes will appear here when materials are added or quantities change.</p></div>
             : <LogsTable logs={data.logs} />}
       </section>
       <InventoryPagination data={data ? { ...data, totalItems: data.totalLogs } : null} page={page} isLoading={isLoading}
-        onPageChange={loadPage} disabled={isLoading || isBusy} label="Logs" noun="logs" pageSize={LOGS_PAGE_SIZE} />
-      {isClearOpen && <ClearLogsModal totalLogs={data.totalLogs} onClose={closeClear} onConfirm={confirmClear} isPending={operation === 'clear'} error={clearError} />}
+        onPageChange={loadPage} disabled={isLoading || isBusy || isRateLimited} label="Logs" noun="logs" pageSize={LOGS_PAGE_SIZE} />
+      {isClearOpen && <ClearLogsModal totalLogs={data.totalLogs} onClose={closeClear} onConfirm={confirmClear} isPending={operation === 'clear'} error={clearError} isSubmitDisabled={isRateLimited} />}
     </div>
   );
 }

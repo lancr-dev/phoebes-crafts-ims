@@ -2,12 +2,16 @@ import { useRef, useState } from 'react';
 import { Eye, EyeOff, LockKeyhole, ArrowRight } from 'lucide-react';
 import { Navigate } from 'react-router';
 import AuthLayout from '../components/AuthLayout.jsx';
+import Skeleton from '../components/Skeleton.jsx';
+import RateLimitNotice from '../components/RateLimitNotice.jsx';
+import useRateLimit from '../hooks/useRateLimit.js';
 import useAuth from '../hooks/useAuth.js';
 import { getAuthError } from '../utils/authErrors.js';
 import { validateLogin } from '../utils/validateLogin.js';
 
 const LoginPage = () => {
   const { admin, isChecking, sessionError, signIn } = useAuth();
+  const { isRateLimited } = useRateLimit('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,7 +27,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (submittingRef.current || isChecking) return;
+    if (submittingRef.current || isChecking || isRateLimited) return;
     const errors = validateLogin({ username, password });
     setFieldErrors(errors);
     setRequestError('');
@@ -49,6 +53,8 @@ const LoginPage = () => {
       <p className="auth-eyebrow">Admin access</p>
       <h1 className="auth-title">Welcome back.</h1>
       <p className="auth-description">Sign in to manage your inventory.</p>
+      {isChecking && <div className="auth-session-skeleton" role="status"><span className="visually-hidden">Checking your session…</span><Skeleton /></div>}
+      <RateLimitNotice scope="login" />
 
       <form className="auth-form" onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
         <div className="auth-field">
@@ -117,7 +123,7 @@ const LoginPage = () => {
           ) : sessionError ? <p className="auth-session-note">{sessionError}</p> : null}
         </div>
 
-        <button className="auth-submit" type="submit" disabled={isChecking || isSubmitting}>
+        <button className="auth-submit" type="submit" disabled={isChecking || isSubmitting || isRateLimited}>
           <span>{isChecking ? 'Checking session…' : isSubmitting ? 'Signing in…' : 'Sign in'}</span>
           {!isChecking && !isSubmitting && <ArrowRight size={19} aria-hidden="true" />}
         </button>

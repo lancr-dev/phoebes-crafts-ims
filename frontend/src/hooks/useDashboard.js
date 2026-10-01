@@ -33,7 +33,7 @@ export default function useDashboard() {
         }
         const message = getDashboardError(failure, !navigator.onLine);
         setError(message);
-        toast.error(message, { id: 'dashboard-error' });
+        if (failure.response?.status !== 429) toast.error(message, { id: 'dashboard-error' });
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }

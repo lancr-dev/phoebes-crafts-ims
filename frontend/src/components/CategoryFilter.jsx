@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Filter } from 'lucide-react';
+import Skeleton from './Skeleton.jsx';
 
 export default function CategoryFilter({ category, categories, isLoading, error, onChange, onRetry, disabled }) {
   const id = useId();
@@ -25,7 +26,7 @@ export default function CategoryFilter({ category, categories, isLoading, error,
             {options.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
-        {isLoading && <p className="inventory-filter-help" role="status">Loading categories…</p>}
+        {isLoading && <div className="inventory-filter-loading"><p className="inventory-filter-help" role="status">Loading categories…</p><Skeleton /></div>}
         {error ? <div className="inventory-filter-error" role="alert"><p>{error}</p><button className="inventory-button" type="button" onClick={onRetry} disabled={disabled || isLoading}>Retry categories</button></div>
           : !isLoading && <p className="inventory-filter-help">{categories.length === 0 ? 'No categories yet. Add a material to create one.' : 'Choose a category to see its materials across all pages.'}</p>}
       </div>

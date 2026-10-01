@@ -1,0 +1,7 @@
+.rate-limit-notice { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); margin-block-end: var(--space-6); border: 1px solid var(--color-accent); border-radius: var(--radius-control); background: color-mix(in srgb, var(--color-soft) 40%, var(--color-canvas)); color: var(--color-text); overflow-wrap: anywhere; }
+.rate-limit-notice > svg { flex: 0 0 auto; margin-block-start: 0.125rem; }
+.rate-limit-message { flex: 1 1 10rem; min-inline-size: 0; }
+.rate-limit-message p { margin: 0; font-size: 0.8125rem; line-height: 1.6; }
+.rate-limit-message p:first-child { font-weight: 600; margin-block-end: var(--space-1); }
+.rate-limit-countdown { flex: 0 0 auto; margin: 0; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.5; }
+.auth-description + .rate-limit-notice { margin-block-start: var(--space-6); }

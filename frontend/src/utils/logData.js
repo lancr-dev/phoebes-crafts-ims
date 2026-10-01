@@ -47,7 +47,7 @@ export const logActionLabel = (actionType) => actionType === 'ADD' ? 'Stock in' 
 export const getLogsError = (error, { action = 'load', offline = false } = {}) => {
   if (offline) return "You're offline. Reconnect, then refresh logs.";
   const status = error.response?.status;
-  if (status === 429) return 'Too many requests. Wait a moment, then try again.';
+  if (status === 429) return 'Too many requests. Please try again when the countdown finishes.';
   if (status === 403) return 'You do not have permission to perform this action.';
   if (status === 400) return 'This log selection could not be accepted. Refresh and try again.';
   if (action === 'clear') return 'The clearing result could not be confirmed. Close this dialog to refresh logs before trying again.';

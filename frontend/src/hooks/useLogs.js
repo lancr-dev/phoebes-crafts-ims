@@ -34,7 +34,7 @@ export default function useLogs() {
         const message = getLogsError(failure, { offline: !navigator.onLine });
         setError(message);
         setIsLoading(false);
-        toast.error(message, { id: 'logs-load-error' });
+        if (failure.response?.status !== 429) toast.error(message, { id: 'logs-load-error' });
       }
     };
     load();

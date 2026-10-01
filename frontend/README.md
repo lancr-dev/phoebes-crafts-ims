@@ -42,6 +42,28 @@ routes. Keep the frontend and API on the same site for `SameSite=Strict` cookies
 A successful login redirects to `/dashboard` (also accessible through `/`).
 Refreshing restores the server session. Signing out returns to `/login`.
 
+## Request cooldowns
+
+The shared Axios client handles every API request, including authentication,
+dashboard, inventory, categories, logs, and PDF exports. A server `429` starts a
+cooldown using `Retry-After` (seconds or an HTTP date). `X-RateLimit-Scope` identifies
+whether only login attempts or all API requests must pause. Missing scope headers
+pause all requests; missing or invalid delays default to one minute for the API or
+fifteen minutes for a known login limit.
+
+`components/RateLimitNotice.jsx` displays a responsive countdown on login, in the
+workspace, and inside open dialogs. Request buttons are disabled during the
+applicable cooldown; form fields and Cancel stay usable. The Axios interceptor
+also rejects requests locally, so programmatic calls cannot bypass the pause.
+Controls become available when the countdown expires. Use Sign in, Refresh, or the
+action button to retry; failed requests are never queued or automatically replayed.
+Countdown ticks are not announced every second to screen readers.
+
+Cooldowns are shared across navigation within the current tab. The backend remains
+the source of truth and enforces its limits across refreshes and other clients:
+100 API requests per IP per minute and 5 login attempts per IP per fifteen minutes.
+Frontend cooldowns do not replace backend enforcement or store any credentials.
+
 ## Dashboard
 
 The dashboard calls `GET /api/inventory/dashboard` through the shared Axios client.
@@ -119,12 +141,27 @@ newer history is kept. Duplicate submissions are blocked. After a failed clear,
 closing the dialog refreshes history before another attempt. Empty or unavailable
 history disables both export and clearing. Expired sessions return to login.
 
+## Loading states
+
+Reusable CSS skeletons show dashboard totals, recently added materials, inventory
+rows, and log rows while their data is loading. Six decorative table rows provide
+a preview of the upcoming layout; actual inventory and logs pagination stays at
+twenty records per page. Category loading and session checks also show placeholders.
+The table skeletons reuse the existing responsive row layouts, including stacked
+mobile entries. Dashboard refresh keeps previously loaded data visible.
+
+Skeletons use the app's gray palette with a subtle opacity pulse and stop animating
+when reduced motion is enabled. Decorative shapes are hidden from screen readers,
+loading status text remains available, and fake action controls cannot receive
+focus. Empty, error, and cooldown states use their existing messages. Form submission
+continues to show its pending action without replacing entered values.
+
 ## Checks
 
 ```powershell
 npm run build
 npm run lint
-node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js test/logs.test.js
+node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js test/logs.test.js test/rateLimit.test.js
 ```
 
 The automated frontend checks mock HTTP responses and do not contact MongoDB or Redis.

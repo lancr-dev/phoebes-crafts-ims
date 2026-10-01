@@ -35,13 +35,13 @@ test('password validation counts UTF-8 bytes without trimming the password', () 
   assert.ok(validateLogin({ username: 'admin', password: 'é'.repeat(513) }).password);
 });
 
-test('rate limiting uses Retry-After and safely handles missing headers', () => {
+test('rate-limit errors direct users to the shared countdown without stale minute estimates', () => {
   assert.equal(getAuthError({ response: { status: 429, headers: { 'retry-after': '61' } } }),
-    'Too many requests. Try again in 2 minutes.');
+    'Too many requests. Please try again when the countdown finishes.');
   assert.equal(getAuthError({ response: { status: 429, headers: { 'retry-after': '60' } } }),
-    'Too many requests. Try again in 1 minute.');
+    'Too many requests. Please try again when the countdown finishes.');
   assert.equal(getAuthError({ response: { status: 429 } }),
-    'Too many requests. Please wait before trying again.');
+    'Too many requests. Please try again when the countdown finishes.');
 });
 
 test('connection, timeout, credentials, and service failures have useful messages', () => {

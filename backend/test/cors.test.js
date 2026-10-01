@@ -12,12 +12,16 @@ process.env.UPSTASH_REDIS_REST_URL = 'https://example.invalid';
 process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token';
 
 const { default: redis } = await import('../src/config/upstash.js');
+let limitedScope = '';
 // Mock the transport because the Redis client automatically pipelines commands.
 const rateLimit = mock.method(redis.client, 'request', async ({ body }) => {
   const pipelined = Array.isArray(body[0]);
   const commands = pipelined ? body : [body];
   const results = commands.map((command) => {
     assert.equal(command[0], 'eval');
+    if (command[3].endsWith(`:${limitedScope}:127.0.0.1`)) {
+      return { result: limitedScope === 'login' ? [6, 900] : [101, 60] };
+    }
     return { result: [1, 60] };
   });
   return pipelined ? results : results[0];
@@ -48,6 +52,7 @@ test('configured frontend receives credentialed CORS headers', async () => {
   const exposed = response.headers.get('access-control-expose-headers');
   assert.match(exposed, /Content-Disposition/i);
   assert.match(exposed, /Retry-After/i);
+  assert.match(exposed, /X-RateLimit-Scope/i);
   await response.json();
 });
 
@@ -134,4 +139,37 @@ test('same-origin mutations remain usable', async () => {
   });
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { message: 'Provide a valid username and password' });
+});
+
+test('API cooldowns include the scope and retry delay even on login requests', async () => {
+  limitedScope = 'api';
+  try {
+    const response = await request('/api/auth/login', {
+      method: 'POST', headers: { Origin: frontendOrigin, 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(response.status, 429);
+    assertAllowedOrigin(response);
+    assert.equal(response.headers.get('retry-after'), '60');
+    assert.equal(response.headers.get('x-ratelimit-scope'), 'api');
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await response.json(), { message: 'Too many requests. Please try again later.' });
+  } finally { limitedScope = ''; }
+});
+
+test('login cooldowns are distinguished from the global API limit', async () => {
+  limitedScope = 'login';
+  try {
+    const response = await request('/api/auth/login', {
+      method: 'POST', headers: { Origin: frontendOrigin, 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(response.status, 429);
+    assertAllowedOrigin(response);
+    assert.equal(response.headers.get('retry-after'), '900');
+    assert.equal(response.headers.get('x-ratelimit-scope'), 'login');
+    await response.json();
+    const other = await request('/api/inventory', { headers: { Origin: frontendOrigin } });
+    assert.equal(other.status, 401);
+    assert.equal(other.headers.get('x-ratelimit-scope'), null);
+    await other.json();
+  } finally { limitedScope = ''; }
 });

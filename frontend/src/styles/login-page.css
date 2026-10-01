@@ -13,16 +13,13 @@
 }
 
 .auth-brand { display: flex; align-items: center; gap: var(--space-3); }
-.auth-monogram {
-  display: grid;
-  place-items: center;
+.auth-logo {
+  display: block;
   flex-shrink: 0;
   inline-size: 2.75rem;
   block-size: 2.75rem;
-  background: var(--color-accent);
   border-radius: var(--radius-control);
-  font: italic 2rem/1 var(--font-display);
-  padding-block-end: 0.2rem;
+  object-fit: contain;
 }
 .auth-brand-name { margin: 0; font: 1.4rem/1.2 var(--font-display); }
 .auth-brand-label { margin: var(--space-1) 0 0; font-size: 0.6875rem; letter-spacing: 0.11em; text-transform: uppercase; }
@@ -101,7 +98,7 @@
   .auth-brand-copy { margin-block-start: var(--space-6); font-size: 1rem; }
   .auth-main { padding: var(--space-16) clamp(2rem, 6vw, 7rem); }
   .auth-brand-name { font-size: 1.625rem; }
-  .auth-monogram { inline-size: 3rem; block-size: 3rem; }
+  .auth-logo { inline-size: 3rem; block-size: 3rem; }
 }
 
 @media (max-width: 23rem) {

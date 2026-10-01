@@ -17,16 +17,13 @@
   text-decoration: none;
 }
 
-.sidebar-monogram {
-  display: grid;
-  place-items: center;
+.sidebar-logo {
+  display: block;
   flex-shrink: 0;
   inline-size: 2.5rem;
   block-size: 2.5rem;
-  padding-block-end: 0.2rem;
-  background: var(--color-accent);
   border-radius: var(--radius-control);
-  font: italic 1.875rem/1 var(--font-display);
+  object-fit: contain;
 }
 
 .sidebar-brand-name { display: block; font: 1.2rem/1.25 var(--font-display); }

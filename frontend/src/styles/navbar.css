@@ -23,15 +23,12 @@
 }
 
 .navbar-avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   flex-shrink: 0;
   inline-size: 2.25rem;
   block-size: 2.25rem;
-  background: var(--color-soft);
   border-radius: 50%;
-  font-size: 0.875rem;
-  font-weight: 600;
+  object-fit: contain;
 }
 
 .navbar-account-details { display: flex; flex-direction: column; min-inline-size: 0; gap: var(--space-1); }

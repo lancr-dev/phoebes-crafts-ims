@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo.jsx';
 import '../styles/login-page.css';
 
 export default function AuthLayout({ children }) {
@@ -5,7 +6,7 @@ export default function AuthLayout({ children }) {
     <div className="auth-layout">
       <header className="auth-brand-panel">
         <div className="auth-brand">
-          <span className="auth-monogram" aria-hidden="true">p.</span>
+          <BrandLogo className="auth-logo" />
           <div>
             <p className="auth-brand-name">Phoebe’s Crafts</p>
             <p className="auth-brand-label">Inventory management</p>

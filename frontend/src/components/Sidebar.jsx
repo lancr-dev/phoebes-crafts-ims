@@ -1,12 +1,13 @@
 import { History, LayoutDashboard, LogOut, Package } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
+import BrandLogo from './BrandLogo.jsx';
 import '../styles/sidebar.css';
 
 const Sidebar = ({ onSignOut, isSigningOut, isSignOutDisabled }) => {
   return (
     <aside className="app-sidebar" aria-label="Workspace">
       <Link className="sidebar-brand" to="/dashboard" aria-label="Phoebe's Crafts dashboard">
-        <span className="sidebar-monogram" aria-hidden="true">p.</span>
+        <BrandLogo className="sidebar-logo" />
         <span>
           <span className="sidebar-brand-name">Phoebe’s Crafts</span>
           <span className="sidebar-brand-label">Inventory management</span>

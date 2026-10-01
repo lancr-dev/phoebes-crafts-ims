@@ -2,9 +2,19 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import Inventory from '../models/Inventory.js';
 import InventoryLog from '../models/InventoryLog.js';
-import { createItem, updateItem, adjustStock, deleteItem } from '../services/inventoryService.js';
+import {
+  createItem,
+  updateItem,
+  adjustStock,
+  deleteItem,
+} from '../services/inventoryService.js';
 import HttpError from '../utils/HttpError.js';
-import { validateId, parseInventoryInput, parseQuantity, parsePagination } from '../utils/inventoryValidation.js';
+import {
+  validateId,
+  parseInventoryInput,
+  parseQuantity,
+  parsePagination,
+} from '../utils/inventoryValidation.js';
 
 export const createInventoryItem = async (req, res) => {
   const item = await createItem(parseInventoryInput(req.body));
@@ -13,7 +23,10 @@ export const createInventoryItem = async (req, res) => {
 
 export const getInventoryItems = async (req, res) => {
   const { skip, limit } = parsePagination(req.query);
-  const items = await Inventory.find().sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit);
+  const items = await Inventory.find()
+    .sort({ createdAt: -1, _id: -1 })
+    .skip(skip)
+    .limit(limit);
   res.status(200).json(items);
 };
 
@@ -56,11 +69,16 @@ export const getInventoryLogs = async (req, res) => {
     .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit);
-  res.status(200).json({ logs, currentPage: page, totalPages: Math.ceil(totalLogs / limit), totalLogs });
+  res.status(200).json({
+    logs,
+    currentPage: page,
+    totalPages: Math.ceil(totalLogs / limit),
+    totalLogs,
+  });
 };
 
 export const deleteInventoryLogs = (_req, _res) => {
-  throw new HttpError(403, 'Bulk log deletion is disabled until admin authentication is available');
+  throw new HttpError(403, 'Bulk log deletion is disabled');
 };
 
 export const exportInventoryLogs = async (_req, res) => {

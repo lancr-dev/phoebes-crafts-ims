@@ -1,34 +1,40 @@
 import redis from '../config/upstash.js';
+import HttpError from '../utils/HttpError.js';
 
-const WINDOW_SIZE_IN_SECONDS = 60;
-const MAX_REQUESTS = 100;
+// Increment and expiry must happen together so a failed request cannot leave a permanent counter.
+const counterScript = `
+  local requests = redis.call('INCR', KEYS[1])
+  local ttl = redis.call('TTL', KEYS[1])
+  if ttl < 0 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+    ttl = tonumber(ARGV[1])
+  end
+  return {requests, ttl}
+`;
 
-const rateLimiter = async (req, res, next) => {
+const createRateLimiter = ({ prefix, windowSeconds, maxRequests }) => async (req, res, next) => {
+  let counter;
   try {
-    const ip = req.ip;
-
-    const redisKey = `rate-limit:${ip}`;
-
-    const requests = await redis.incr(redisKey);
-
-    if (requests === 1) {
-      await redis.expire(redisKey, WINDOW_SIZE_IN_SECONDS);
+    counter = await redis.eval(counterScript, [`phoebes:rate-limit:${prefix}:${req.ip}`], [windowSeconds]);
+    if (!Array.isArray(counter) || !Number.isSafeInteger(counter[0]) || !Number.isSafeInteger(counter[1])) {
+      throw new Error('Invalid rate limit counter');
     }
-
-    if (requests > MAX_REQUESTS) {
-      return res.status(429).json({
-        message: 'Too many requests. Please try again later.',
-      });
-    }
-
-    next();
   } catch (error) {
-    console.error(error);
+    console.error('Rate limiting unavailable', { name: error.name });
+    throw new HttpError(503, 'The service is temporarily unavailable. Please try again later.');
+  }
 
-    res.status(500).json({
-      message: 'Server Error',
+  const [requests, ttl] = counter;
+  if (requests > maxRequests) {
+    res.set('Retry-After', String(Math.max(ttl, 1)));
+    return res.status(429).json({
+      message: 'Too many requests. Please try again later.',
     });
   }
+  next();
 };
+
+export const loginRateLimiter = createRateLimiter({ prefix: 'login', windowSeconds: 15 * 60, maxRequests: 5 });
+const rateLimiter = createRateLimiter({ prefix: 'api', windowSeconds: 60, maxRequests: 100 });
 
 export default rateLimiter;

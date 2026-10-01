@@ -1,4 +1,7 @@
 .app-navbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6,6 +9,7 @@
   min-block-size: 5rem;
   padding: var(--space-4);
   border-block-end: 1px solid var(--color-border);
+  background: var(--color-canvas);
 }
 
 .navbar-workspace-label {
@@ -13,6 +17,10 @@
   color: var(--color-muted);
   font-size: 0.8125rem;
 }
+
+.navbar-leading { display: flex; align-items: center; gap: var(--space-3); min-inline-size: 0; }
+.navbar-menu-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; inline-size: 2.75rem; block-size: 2.75rem; padding: var(--space-2); border: 1px solid var(--color-control-border); border-radius: var(--radius-control); background: var(--color-canvas); color: var(--color-text); }
+.navbar-menu-button:hover { background: var(--color-soft); }
 
 .navbar-account {
   display: flex;
@@ -36,4 +44,8 @@
 .navbar-account-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; font-weight: 600; }
 
 @media (min-width: 40rem) { .app-navbar { padding-inline: var(--space-8); } }
-@media (min-width: 64rem) { .app-navbar { padding-inline: clamp(2rem, 4vw, 4rem); } }
+@media (max-width: 39.99rem) { .navbar-workspace-label { display: none; } }
+@media (min-width: 64rem) {
+  .app-navbar { position: static; z-index: auto; padding-inline: clamp(2rem, 4vw, 4rem); }
+  .navbar-menu-button { display: none; }
+}

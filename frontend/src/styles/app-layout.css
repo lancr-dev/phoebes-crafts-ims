@@ -8,6 +8,7 @@
 
 .app-main {
   padding: var(--space-8) var(--space-4) var(--space-12);
+  scroll-margin-block-start: 5rem;
 }
 
 .app-skip-link {
@@ -31,5 +32,5 @@
 
 @media (min-width: 64rem) {
   .app-shell { grid-template-columns: 15rem minmax(0, 1fr); }
-  .app-main { padding: var(--space-12) clamp(2rem, 4vw, 4rem); }
+  .app-main { padding: var(--space-12) clamp(2rem, 4vw, 4rem); scroll-margin-block-start: 0; }
 }

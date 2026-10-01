@@ -82,8 +82,15 @@ values. Expired sessions return to login. React Hot Toast supplies refresh, erro
 session-expiration, and sign-out feedback.
 
 On desktop, the dashboard uses sidebar navigation and a four-column totals layout.
-Narrow layouts place navigation above the page, use two columns for totals, and
-stack recent material rows while retaining the name, category, stock, and status.
+Below the desktop breakpoint (64rem), the navbar stays at the top while scrolling.
+Its hamburger button opens a modal
+sidebar containing Dashboard, Inventory, Inventory logs, and Sign out. A close
+button, Escape, or tapping the backdrop dismisses it. Selecting a page closes the
+sidebar and focuses the main content; other dismissals return focus to the menu
+button. Background content stays inert and scrolling is locked while it is open.
+Resizing to desktop closes it and restores scrolling. Desktop uses the persistent
+sidebar. Narrow layouts use two columns for totals and stack recent material rows
+while retaining the name, category, stock, and status.
 
 ## Inventory
 
@@ -161,7 +168,7 @@ continues to show its pending action without replacing entered values.
 ```powershell
 npm run build
 npm run lint
-node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js test/logs.test.js test/rateLimit.test.js
+node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/inventory.test.js test/logs.test.js test/rateLimit.test.js test/navigation.test.js
 ```
 
 The automated frontend checks mock HTTP responses and do not contact MongoDB or Redis.
@@ -183,3 +190,8 @@ dashboard totals and newest-first rows. Check
 keyboard navigation and widths of 320, 375, 768, 1024, and 1440 pixels, plus 200%
 zoom. The backend limits login to five requests per IP in fifteen minutes, including
 successful attempts.
+
+For mobile navigation, check opening from the navbar, keyboard focus remaining in
+the drawer, Escape, close, backdrop dismissal, closing after each page selection,
+and sign-out. Confirm the page cannot scroll behind an open drawer and scrolling
+returns after dismissal. Resize an open drawer to desktop and check that it closes.

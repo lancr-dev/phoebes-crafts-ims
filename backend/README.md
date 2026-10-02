@@ -19,10 +19,13 @@ Restart the backend after changing this setting. Use the actual port printed by
 Vite and omit a trailing slash. In production, use the frontend's HTTPS origin.
 If the setting is absent, cross-origin browser access is disabled.
 
-CORS permits that origin with cookie credentials and handles preflight requests
+CORS in local development permits that origin with cookie credentials and handles preflight requests
 before authentication and rate limiting. API requests still require the existing
 authentication and trusted-origin checks. `Content-Disposition`, `Retry-After`,
 and `X-RateLimit-Scope` are exposed for downloads and rate-limit handling.
+Production serves React and the API from the same origin without CORS. See the
+[Render deployment guide](../README.md) for build/start commands, environment
+settings, health checks, and production verification.
 
 The global limiter allows 100 API requests per IP per minute. The login route also
 allows 5 attempts per IP per fifteen minutes, including successful attempts. A

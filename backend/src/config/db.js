@@ -8,7 +8,10 @@ const connectMongoDB = async () => {
 
     logger.info('MongoDB connected', { event: 'database.connected' });
   } catch (error) {
-    logger.error('MongoDB connection failed', { event: 'database.connection_failed', ...describeError(error) });
+    logger.error('MongoDB connection failed', {
+      event: 'database.connection_failed',
+      ...describeError(error),
+    });
     throw error;
   }
 };

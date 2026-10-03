@@ -79,7 +79,7 @@ Versions below describe the major versions declared in the repository manifests.
 | Session and limit store | Upstash Redis REST client | Session records and distributed rate-limit counters |
 | Configuration | dotenv, environment variables | Local and production configuration |
 | Operational logging | Winston 3, Better Stack Logtail | Structured console logs and batched remote delivery |
-| Development and checks | Nodemon, ESLint 10, Node test runner | Backend reloads, frontend linting, and automated verification |
+| Development and checks | Node.js watch mode, ESLint 10, Node test runner | Backend reloads, frontend linting, and automated verification |
 | Deployment | Render Web Service | One service for the API and built frontend |
 
 See [root scripts](package.json), [backend dependencies](backend/package.json), and [frontend dependencies](frontend/package.json).
@@ -278,6 +278,8 @@ Run the backend in one terminal, from the repository root:
 ```sh
 npm run dev --prefix backend
 ```
+
+The backend uses Node's built-in watch mode to restart when its entry point or imported modules change. Console output is preserved across restarts. Restart the development command manually after changing environment values in `backend/.env`.
 
 Run Vite in another terminal:
 

@@ -17,6 +17,7 @@ The application uses a React frontend and an Express API, with MongoDB for inven
 - [Getting started](#getting-started)
 - [API reference](#api-reference)
 - [Deployment on Render](#deployment-on-render)
+- [Logging and monitoring](#logging-and-monitoring)
 - [Testing and verification](#testing-and-verification)
 - [Operational considerations](#operational-considerations)
 - [Asset attribution](#asset-attribution)
@@ -77,6 +78,7 @@ Versions below describe the major versions declared in the repository manifests.
 | Database | MongoDB, Mongoose 9 | Schemas, queries, indexes, and transactions |
 | Session and limit store | Upstash Redis REST client | Session records and distributed rate-limit counters |
 | Configuration | dotenv, environment variables | Local and production configuration |
+| Operational logging | Winston 3, Better Stack Logtail | Structured console logs and batched remote delivery |
 | Development and checks | Nodemon, ESLint 10, Node test runner | Backend reloads, frontend linting, and automated verification |
 | Deployment | Render Web Service | One service for the API and built frontend |
 
@@ -120,6 +122,9 @@ flowchart LR
     Models --> Mongo[("MongoDB: materials and logs")]
     Guards --> Redis[("Upstash Redis")]
     Services -->|"Session operations"| Redis
+    API --> Logger["Winston: sanitized operational events"]
+    Logger --> Console["Console / Render logs"]
+    Logger --> BetterStack["Better Stack Logs"]
 ```
 
 ### Application layers
@@ -132,7 +137,7 @@ flowchart LR
 | HTTP boundary | `backend/src/routes`, `controllers`, `middleware` | Endpoint mapping, request validation, access checks, and response handling |
 | Application operations | `backend/src/services` | Transactional stock changes, dashboard/log aggregation, and session operations |
 | Persistence and rules | `backend/src/models`, `utils` | Schemas, stock status calculation, log consistency, and input constraints |
-| Infrastructure | `backend/src/config`, `app.js`, `server.js` | Database/Redis clients, environment configuration, middleware composition, and startup |
+| Infrastructure | `backend/src/config`, `app.js`, `server.js` | Database/Redis clients, Winston logging, environment configuration, middleware composition, and startup |
 
 Read operations use Mongoose queries in controllers or services. Stock writes go through the inventory service, which owns the transaction joining material updates with log creation. The inventory model calculates status when a material is saved.
 
@@ -288,6 +293,8 @@ If changing the API address, set `VITE_API_BASE_URL` in `frontend/.env.local` an
 
 Application endpoints use the `/api` prefix. Inventory endpoints and `/auth/me` require an admin session. All API requests pass through the global limiter; mutations also pass through the trusted-origin check. The health route is outside these guards.
 
+Responses include a server-generated `X-Request-ID` for correlating requests with operational logs. Development CORS exposes that header to the frontend. Client-supplied request IDs are not trusted.
+
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/health` | Public process liveness |
@@ -358,6 +365,50 @@ Production binds to `0.0.0.0` and trusts one proxy hop for client IP resolution.
 
 After deployment, verify health, login, session restoration, direct page refreshes, and sign-out. Check inventory writes against the production database when you intend to create those records. Environment-only corrections can be applied through Render's **Save and deploy** option. [Render environment configuration](https://render.com/docs/configure-environment-variables)
 
+## Logging and monitoring
+
+Operational logs use Winston and the official Better Stack transport. They are separate from the inventory movement history stored in MongoDB and displayed on the Inventory logs page.
+
+### Configure Better Stack
+
+Add the following values to `backend/.env` locally and to Render's **Environment** settings for production. Local `.env` files are ignored by Git and are not deployed.
+
+| Variable | Purpose |
+| --- | --- |
+| `BETTER_STACK_SOURCE_TOKEN` | Secret token from your Better Stack source |
+| `BETTER_STACK_INGESTING_HOST` | Source-specific ingesting hostname, or its HTTPS origin; no credentials, path, query, or fragment |
+| `LOG_LEVEL` | Optional: `error`, `warn`, `info`, or `debug`; defaults to `info` |
+
+Use the exact ingesting host displayed for your source rather than assuming a shared endpoint. The logger accepts either `your-ingesting-host` or `https://your-ingesting-host`. [Better Stack Winston integration](https://betterstack.com/docs/logs/javascript/winston/)
+
+Console logging remains active when Better Stack is unconfigured or unavailable. Invalid remote configuration produces a local warning. Delivery errors produce a local warning at most once per minute, without interrupting API requests. Remote delivery uses bounded batches, queues, timeouts, and retries; it is best effort rather than a durable audit archive.
+
+### Events and diagnostics
+
+Each JSON record includes `timestamp`, `level`, `service`, `environment`, `event`, and `message`. Request-scoped events include `request_id`; the HTTP summary also records method, server-defined route template, status, duration in milliseconds, and authentication state.
+
+| Event family | Examples and purpose |
+| --- | --- |
+| HTTP | `http.request.completed`, `http.request.aborted`: status, latency, and interrupted responses |
+| Authentication | `auth.login_succeeded`, `auth.login_rejected`, `auth.logout_succeeded`, `auth.storage_unavailable` |
+| Inventory | `inventory.material_created`, `inventory.material_updated`, `inventory.material_deleted`, `inventory.stock_increased`, `inventory.stock_decreased` |
+| History | `inventory.logs_cleared`, `inventory.logs_exported` |
+| Database and startup | `database.connected`, `database.disconnected`, `database.reconnected`, `database.error`, `server.started`, `server.startup_failed` |
+| Monitoring | `process.health`: uptime, resident memory, heap usage, and MongoDB connection state every sixty seconds |
+| Failures and shutdown | `http.request_failed`, `rate_limit.unavailable`, `process.unhandled_rejection`, `process.uncaught_exception`, `server.shutdown_*` |
+
+Successful API requests log at `info`, client failures at `warn`, and server failures at `error`. Successful health checks and static-file requests log at `debug` to reduce routine noise. Selecting `warn` or `error` also filters health snapshots and successful action events.
+
+Logs omit request/response bodies, headers, cookies, usernames, IP addresses, raw URLs, and query strings. Stock events use material IDs and quantities rather than material names. Error diagnostics retain a safe type/code, application file/line locations, and recognized configuration failure reasons; raw error messages, full stacks, and absolute paths are excluded. A shared sanitizer also redacts sensitive keys and configured secret values and bounds nested metadata.
+
+On `SIGTERM` or `SIGINT`, the server stops accepting requests, drains connections, disconnects MongoDB, and attempts to flush buffered logs before exiting. Shutdown has a fifteen-second deadline. Fatal runtime errors follow the same cleanup path and exit unsuccessfully so the hosting platform can restart the process.
+
+### Verify and monitor
+
+After starting or redeploying, inspect Better Stack **Live tail** for `server.started`, `database.connected`, and subsequent `process.health` events. Perform a normal API request and use its `X-Request-ID` to correlate the HTTP summary with related action or error events. If logs appear only in Render, check for `logging.configuration_invalid` or `logging.delivery_failed` and verify both source settings.
+
+Configure uptime checks for the public `/health` URL and alert rules in Better Stack separately. Useful signals include repeated server errors, sustained high request duration, database disconnects, or missing health snapshots. `/health` verifies process liveness; it does not probe MongoDB or Redis. This repository emits telemetry but does not provision external dashboards, alerts, or uptime checks.
+
 ## Testing and verification
 
 Run the deployment check from the repository root:
@@ -371,7 +422,7 @@ It builds the real frontend, then exercises production routing, JavaScript/CSS/l
 Run the remaining backend checks from the root:
 
 ```sh
-node --test --test-concurrency=1 backend/test/configSecurity.test.js backend/test/cors.test.js backend/test/dashboard.test.js backend/test/inventoryPagination.test.js backend/test/logs.test.js
+node --test --test-concurrency=1 backend/test/configSecurity.test.js backend/test/cors.test.js backend/test/dashboard.test.js backend/test/inventoryPagination.test.js backend/test/logs.test.js backend/test/logging.test.js
 ```
 
 Run frontend checks from the `frontend` directory:
@@ -384,6 +435,8 @@ node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/i
 
 Backend tests mock Redis transport and relevant database operations. Frontend tests mock HTTP responses and cover validation, API contracts, semantic rendering, pagination, cooldowns, navigation, and real PDF generation. These checks do not modify live inventory.
 
+Logging tests cover structured output, credential redaction, isolated request IDs, failed and interrupted requests, remote delivery failures/timeouts, log levels, and graceful/fatal shutdown. Better Stack delivery is disabled in the Node test context, including deployment tests, to prevent test telemetry from reaching a real source.
+
 Browser verification remains a separate step. Check desktop/mobile widths, keyboard navigation, modal focus, drawer dismissal, reduced motion, and 200% zoom, along with primary data workflows and error states. Offline tests do not verify Render credentials, production connectivity, or live MongoDB transaction behavior.
 
 ## Operational considerations
@@ -393,7 +446,7 @@ Browser verification remains a separate step. Check desktop/mobile widths, keybo
 - **Export size:** the API streams logs with a bounded database cursor, while the browser holds the exported history to generate a PDF. Large reports consume memory proportional to the record count.
 - **Pagination:** the application uses bounded offset pagination with indexed ordering. Dashboard counts cover all material records.
 - **Retries:** duplicate form submissions are blocked. An uncertain mutation result requires closing the dialog and refreshing before another attempt; mutations are not automatically replayed.
-- **Monitoring:** startup/dependency failures are logged with sanitized details. Dedicated metrics, alerting, backup scheduling, and recovery automation depend on the deployment environment.
+- **Monitoring:** structured logs, request durations, dependency events, and periodic process health snapshots are available in console output and configured Better Stack sources. External alerting, uptime checks, backup scheduling, and recovery automation require deployment/account configuration.
 
 ## Asset attribution
 

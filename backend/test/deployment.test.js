@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { scryptSync } from 'node:crypto';
-import { once } from 'node:events';
+import { EventEmitter, once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { after, mock, test } from 'node:test';
 
@@ -214,6 +214,7 @@ test('server entry point waits for MongoDB and binds the supplied port on all in
     assert.equal(port, '10000');
     assert.equal(host, '0.0.0.0');
     callback();
+    return new EventEmitter();
   });
   const log = mock.method(console, 'log', () => {});
   const previousPort = process.env.PORT;

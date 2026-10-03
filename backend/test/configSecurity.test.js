@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mock, test } from 'node:test';
 import mongoose from 'mongoose';
 import connectMongoDB from '../src/config/db.js';
+import logger from '../src/config/logger.js';
 
 process.env.NODE_ENV = 'production';
 process.env.ADMIN_USERNAME = 'test-admin';
@@ -35,27 +36,23 @@ test('production session cookies are HTTP-only, HTTPS-only, and restricted to th
 test('database connection failures do not log credentials or raw error messages', async () => {
   const failure = new Error('mongodb://test-user:private-test-password@database.example');
   const connect = mock.method(mongoose, 'connect', async () => { throw failure; });
-  const log = mock.method(console, 'error', () => {});
-  const exit = mock.method(process, 'exit', () => {});
+  const log = mock.method(logger, 'error', () => {});
   try {
-    await connectMongoDB();
-    assert.equal(exit.mock.callCount(), 1);
-    assert.deepEqual(exit.mock.calls[0].arguments, [1]);
-    assert.deepEqual(log.mock.calls[0].arguments, ['MongoDB connection failed', { name: 'Error' }]);
-    assert.equal(JSON.stringify(log.mock.calls).includes('private-test-password'), false);
+    await assert.rejects(connectMongoDB(), (error) => error === failure);
+    assert.deepEqual(log.mock.calls[0].arguments, ['MongoDB connection failed', { event: 'database.connection_failed', error_type: 'Error' }]);
+    assert.equal(JSON.stringify(log.mock.calls.map((call) => call.arguments)).includes('private-test-password'), false);
   } finally {
     connect.mock.restore();
     log.mock.restore();
-    exit.mock.restore();
   }
 });
 
 test('successful database startup does not log the configured host', async () => {
   const connect = mock.method(mongoose, 'connect', async () => ({ connection: { host: 'private-database.example' } }));
-  const log = mock.method(console, 'log', () => {});
+  const log = mock.method(logger, 'info', () => {});
   try {
     await connectMongoDB();
-    assert.deepEqual(log.mock.calls[0].arguments, ['MongoDB connected']);
+    assert.deepEqual(log.mock.calls[0].arguments, ['MongoDB connected', { event: 'database.connected' }]);
   } finally {
     connect.mock.restore();
     log.mock.restore();

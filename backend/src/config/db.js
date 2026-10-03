@@ -1,13 +1,15 @@
 import mongoose from 'mongoose';
+import logger from './logger.js';
+import { describeError } from '../utils/logSanitization.js';
 
 const connectMongoDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
 
-    console.log('MongoDB connected');
+    logger.info('MongoDB connected', { event: 'database.connected' });
   } catch (error) {
-    console.error('MongoDB connection failed', { name: error.name });
-    process.exit(1);
+    logger.error('MongoDB connection failed', { event: 'database.connection_failed', ...describeError(error) });
+    throw error;
   }
 };
 

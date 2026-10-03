@@ -8,6 +8,7 @@ import { frontendOrigin } from './config/auth.js';
 import { requireAdmin, requireTrustedOrigin } from './middleware/auth.js';
 import rateLimiter from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
+import requestLogger from './middleware/requestLogger.js';
 
 const app = express();
 const production = process.env.NODE_ENV === 'production';
@@ -17,6 +18,8 @@ const notFound = (_req, res) => res.status(404).json({ message: 'Route not found
 // Render terminates HTTPS and forwards requests through its proxy.
 // Trust the nearest hop rather than arbitrary client-supplied forwarded entries.
 if (production) app.set('trust proxy', 1);
+
+app.use(requestLogger);
 
 // Handle preflight before authentication/rate limiting and include CORS on errors.
 if (!production) {
@@ -30,6 +33,7 @@ if (!production) {
         'Content-Disposition',
         'Retry-After',
         'X-RateLimit-Scope',
+        'X-Request-ID',
       ],
     }),
   );

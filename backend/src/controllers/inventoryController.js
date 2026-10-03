@@ -12,6 +12,7 @@ import {
   deleteItem,
 } from '../services/inventoryService.js';
 import HttpError from '../utils/HttpError.js';
+import logger from '../config/logger.js';
 import {
   validateId,
   parseInventoryInput,
@@ -22,6 +23,7 @@ import {
 
 export const createInventoryItem = async (req, res) => {
   const item = await createItem(parseInventoryInput(req.body));
+  logger.info('Material created', { event: 'inventory.material_created', material_id: String(item._id), stock: item.stock });
   res.status(201).json(item);
 };
 
@@ -77,25 +79,32 @@ export const getInventoryItem = async (req, res) => {
 export const updateInventoryItem = async (req, res) => {
   validateId(req.params.id);
   const input = parseInventoryInput(req.body, { partial: true });
-  res.status(200).json(await updateItem(req.params.id, input));
+  const item = await updateItem(req.params.id, input);
+  logger.info('Material updated', { event: 'inventory.material_updated', material_id: String(item._id) });
+  res.status(200).json(item);
 };
 
 export const deleteInventoryItem = async (req, res) => {
   validateId(req.params.id);
   await deleteItem(req.params.id);
+  logger.info('Material deleted', { event: 'inventory.material_deleted', material_id: req.params.id });
   res.status(200).json({ message: 'Inventory item deleted successfully' });
 };
 
 export const increaseStock = async (req, res) => {
   validateId(req.params.id);
   const quantity = parseQuantity(req.body);
-  res.status(200).json(await adjustStock(req.params.id, quantity, 1));
+  const item = await adjustStock(req.params.id, quantity, 1);
+  logger.info('Stock increased', { event: 'inventory.stock_increased', material_id: String(item._id), quantity, resulting_stock: item.stock });
+  res.status(200).json(item);
 };
 
 export const decreaseStock = async (req, res) => {
   validateId(req.params.id);
   const quantity = parseQuantity(req.body);
-  res.status(200).json(await adjustStock(req.params.id, quantity, -1));
+  const item = await adjustStock(req.params.id, quantity, -1);
+  logger.info('Stock decreased', { event: 'inventory.stock_decreased', material_id: String(item._id), quantity, resulting_stock: item.stock });
+  res.status(200).json(item);
 };
 
 export const getInventoryLogs = async (req, res) => {
@@ -119,7 +128,9 @@ export const getInventoryLogs = async (req, res) => {
 };
 
 export const deleteInventoryLogs = async (req, res) => {
-  res.status(200).json(await clearLogs(parseClearLogsInput(req.body)));
+  const result = await clearLogs(parseClearLogsInput(req.body));
+  logger.info('Inventory history cleared', { event: 'inventory.logs_cleared', deleted_count: result.deletedCount });
+  res.status(200).json(result);
 };
 
 export const exportInventoryLogs = async (req, res) => {
@@ -146,6 +157,7 @@ export const exportInventoryLogs = async (req, res) => {
       yield ']';
     }
     await pipeline(Readable.from(jsonLogs(), { objectMode: false }), res);
+    logger.info('Inventory history exported', { event: 'inventory.logs_exported' });
   } finally {
     await cursor.close();
   }

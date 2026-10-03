@@ -1,5 +1,7 @@
 import redis from '../config/upstash.js';
 import HttpError from '../utils/HttpError.js';
+import logger from '../config/logger.js';
+import { describeError } from '../utils/logSanitization.js';
 
 // Increment and expiry must happen together so a failed request cannot leave a permanent counter.
 const counterScript = `
@@ -20,7 +22,7 @@ const createRateLimiter = ({ prefix, windowSeconds, maxRequests }) => async (req
       throw new Error('Invalid rate limit counter');
     }
   } catch (error) {
-    console.error('Rate limiting unavailable', { name: error.name });
+    logger.error('Rate limiting unavailable', { event: 'rate_limit.unavailable', ...describeError(error) });
     throw new HttpError(503, 'The service is temporarily unavailable. Please try again later.');
   }
 

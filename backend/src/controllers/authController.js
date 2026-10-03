@@ -10,6 +10,7 @@ import {
   verifyCredentials,
 } from '../services/authService.js';
 import HttpError from '../utils/HttpError.js';
+import logger from '../config/logger.js';
 
 export const login = async (req, res) => {
   const body = req.body;
@@ -28,11 +29,13 @@ export const login = async (req, res) => {
   }
 
   if (!(await verifyCredentials(body.username.trim(), body.password))) {
+    logger.warn('Admin sign-in rejected', { event: 'auth.login_rejected' });
     throw new HttpError(401, 'Invalid username or password');
   }
 
   await revokeSession(readSessionToken(req));
   const { token, expiresAt } = await createSession();
+  logger.info('Admin signed in', { event: 'auth.login_succeeded' });
   res.cookie(sessionCookieName, token, {
     ...sessionCookieOptions,
     expires: new Date(expiresAt),
@@ -48,6 +51,7 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   await revokeSession(readSessionToken(req));
   res.clearCookie(sessionCookieName, sessionCookieOptions);
+  logger.info('Admin signed out', { event: 'auth.logout_succeeded' });
   res.status(200).json({ message: 'Logged out successfully' });
 };
 

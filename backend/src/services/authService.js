@@ -11,6 +11,8 @@ import {
   sessionLifetimeSeconds,
 } from '../config/auth.js';
 import HttpError from '../utils/HttpError.js';
+import logger from '../config/logger.js';
+import { describeError } from '../utils/logSanitization.js';
 
 const deriveKey = promisify(scrypt);
 const sessionKey = (token) => `phoebes:session:${createHash('sha256').update(token).digest('hex')}`;
@@ -28,7 +30,7 @@ const sessionStorage = async (operation) => {
   try {
     return await operation();
   } catch (error) {
-    console.error('Session storage unavailable', { name: error.name });
+    logger.error('Session storage unavailable', { event: 'auth.storage_unavailable', ...describeError(error) });
     throw new HttpError(503, 'Authentication is temporarily unavailable');
   }
 };

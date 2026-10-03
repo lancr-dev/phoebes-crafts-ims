@@ -1,12 +1,15 @@
 import mongoose from 'mongoose';
 import HttpError from '../utils/HttpError.js';
+import logger from '../config/logger.js';
+import { describeError } from '../utils/logSanitization.js';
 
 export default function errorHandler(error, req, res, _next) {
   if (res.headersSent) {
-    console.error('Inventory response interrupted', {
+    logger.error('Inventory response interrupted', {
+      event: 'http.response_interrupted',
+      request_id: req.requestId,
       method: req.method,
-      name: error.name,
-      code: error.code,
+      ...describeError(error),
     });
     res.destroy();
     return;
@@ -32,10 +35,11 @@ export default function errorHandler(error, req, res, _next) {
     });
   }
   // Avoid logging request bodies, connection strings, or database error messages.
-  console.error('Inventory request failed', {
+  logger.error('Inventory request failed', {
+    event: 'http.request_failed',
+    request_id: req.requestId,
     method: req.method,
-    name: error.name,
-    code: error.code,
+    ...describeError(error),
   });
   res.status(500).json({ message: 'An unexpected server error occurred' });
 }

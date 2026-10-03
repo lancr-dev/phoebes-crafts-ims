@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
+import { isValidUsername } from '../../../shared/inputValidation.mjs';
 
 export const adminUsername = process.env.ADMIN_USERNAME;
 const encodedHash = process.env.ADMIN_PASSWORD_HASH;
@@ -7,7 +8,7 @@ const hashParts = /^scrypt\$32768\$8\$3\$([a-f0-9]{32})\$([a-f0-9]{128})$/.exec(
   encodedHash ?? '',
 );
 
-if (!adminUsername || adminUsername !== adminUsername.trim() || !hashParts) {
+if (!isValidUsername(adminUsername) || adminUsername !== adminUsername.trim() || !hashParts) {
   throw new Error(
     'Configure ADMIN_USERNAME and a valid ADMIN_PASSWORD_HASH before starting the server',
   );

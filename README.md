@@ -172,9 +172,9 @@ The Axios client sends cookies and normally uses a ten-second timeout. JSON log 
 | Field | Meaning |
 | --- | --- |
 | `_id` | MongoDB material identifier |
-| `itemName` | Required, trimmed material name |
-| `category` | Required, trimmed category label |
-| `stock` | Nonnegative safe integer |
+| `itemName` | Required, trimmed single-line material name, at most 50 characters |
+| `category` | Required, trimmed single-line category label, at most 50 characters |
+| `stock` | Whole number from 0 to 1,000,000 |
 | `status` | Status derived from stock |
 | `createdAt`, `updatedAt` | Server-maintained timestamps |
 
@@ -185,6 +185,12 @@ The Axios client sends cookies and normally uses a ten-second timeout. JSON log 
 | `11+` | In Stock |
 
 The low-stock threshold is currently fixed at ten. Categories are stored labels; filters use exact, case-sensitive matches after trimming. Indexes support newest-first ordering and category/newest-first queries.
+
+Creation and updates enforce the same public input rules in forms, API validation, and the inventory schema. Names and categories reject blank values, control characters, and labels consisting only of invisible formatting characters. Length follows the browser's `maxlength` and JavaScript string-length convention. Each increase/decrease accepts a whole quantity from 1 to 1,000,000; increases cannot take stock above 1,000,000, and decreases cannot exceed available stock. The transaction checks current database stock rather than relying on a previously displayed quantity.
+
+Stock fields preserve typed and pasted text for validation. Empty values, negative numbers, decimals, scientific notation, and comma-separated numbers produce inline errors. The forms show limits, validate on blur and submission, and focus the first invalid field. Requests with malformed JSON, wrong value types, invalid identifiers, or invalid page/filter values fail before data writes. Login retains its 100-character username and 1,024-byte UTF-8 password limits; password whitespace remains significant.
+
+Limits are centralized in `shared/inputValidation.mjs`, which contains public rules only. Existing records are not rewritten: older materials outside the new limits need correction before they can be saved again. Historical movement records retain their recorded names and quantities and remain readable.
 
 ### Movement history
 
@@ -200,6 +206,8 @@ Inventory and log pages sort by `createdAt` and `_id` descending. The UI request
 phoebes-crafts-ims/
 |-- README.md
 |-- package.json               # Combined production build/start scripts
+|-- shared/
+|   `-- inputValidation.mjs    # Public input limits and validation predicates
 |-- backend/
 |   |-- package.json
 |   |-- package-lock.json
@@ -424,7 +432,7 @@ It builds the real frontend, then exercises production routing, JavaScript/CSS/l
 Run the remaining backend checks from the root:
 
 ```sh
-node --test --test-concurrency=1 backend/test/configSecurity.test.js backend/test/cors.test.js backend/test/dashboard.test.js backend/test/inventoryPagination.test.js backend/test/logs.test.js backend/test/logging.test.js
+node --test --test-concurrency=1 backend/test/configSecurity.test.js backend/test/cors.test.js backend/test/dashboard.test.js backend/test/inventoryPagination.test.js backend/test/logs.test.js backend/test/logging.test.js backend/test/inputValidation.test.js
 ```
 
 Run frontend checks from the `frontend` directory:
@@ -438,6 +446,8 @@ node --test --test-concurrency=1 test/auth.test.js test/dashboard.test.js test/i
 Backend tests mock Redis transport and relevant database operations. Frontend tests mock HTTP responses and cover validation, API contracts, semantic rendering, pagination, cooldowns, navigation, and real PDF generation. These checks do not modify live inventory.
 
 Logging tests cover structured output, credential redaction, isolated request IDs, failed and interrupted requests, remote delivery failures/timeouts, log levels, and graceful/fatal shutdown. Better Stack delivery is disabled in the Node test context, including deployment tests, to prevent test telemetry from reaching a real source.
+
+Input validation tests cover exact limits, malformed types, control characters, numeric formats, schema constraints, current stock capacity, and rejected adjustments without stock/history writes. They run with mocked database/Redis operations and do not contact production services.
 
 Browser verification remains a separate step. Check desktop/mobile widths, keyboard navigation, modal focus, drawer dismissal, reduced motion, and 200% zoom, along with primary data workflows and error states. Offline tests do not verify Render credentials, production connectivity, or live MongoDB transaction behavior.
 

@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
+import { createServer as createHttpServer } from 'node:http';
+import { once } from 'node:events';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { createServer } from 'vite';
 import { parseInventoryPage, parseInventoryCategories, validateMaterialForm, validateAdjustment, getInventoryError, requiresInventoryRefresh } from '../src/utils/inventoryData.js';
+import { MAX_STOCK } from '../../shared/inputValidation.mjs';
 
 const item = { _id: '0123456789abcdef01234567', itemName: 'Cotton yarn', category: 'Yarn', stock: 12, status: 'In Stock' };
 const pageData = { items: [item], currentPage: 2, pageSize: 20, totalItems: 21, totalPages: 2 };
@@ -22,6 +25,23 @@ const { default: CategoryFilter } = await vite.ssrLoadModule('/src/components/Ca
 const { default: AuthContext } = await vite.ssrLoadModule('/src/auth/AuthContext.js');
 const { default: Sidebar } = await vite.ssrLoadModule('/src/components/Sidebar.jsx');
 const render = (Component, props) => renderToStaticMarkup(createElement(Component, props));
+
+test('Vite serves the shared public validation module in local development', async () => {
+  const server = createHttpServer(vite.middlewares);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${origin}/src/utils/inventoryData.js`);
+    assert.equal(response.status, 200);
+    const source = await response.text();
+    const sharedImport = /from\s+"([^"]*shared\/inputValidation\.mjs[^"]*)"/.exec(source);
+    assert.ok(sharedImport, 'The client transform should resolve the shared module');
+    const sharedResponse = await fetch(`${origin}${sharedImport[1]}`);
+    assert.equal(sharedResponse.status, 200);
+    assert.match(await sharedResponse.text(), /MAX_MATERIAL_TEXT_LENGTH/);
+  } finally { await new Promise((resolve) => server.close(resolve)); }
+});
 
 test('pagination accepts a partial final page, empty collection, and removed last page', () => {
   assert.deepEqual(parseInventoryPage(pageData, 2), pageData);
@@ -54,6 +74,22 @@ test('create form trims details, permits zero, and rejects invalid whole stock v
   assert.ok(result.errors.category);
 });
 
+test('create and edit forms enforce label limits and reject malformed values without crashing', () => {
+  for (const editing of [false, true]) {
+    assert.deepEqual(validateMaterialForm({ itemName: 'a'.repeat(50), category: 'b'.repeat(50), stock: String(MAX_STOCK) }, editing).errors, {});
+    for (const field of ['itemName', 'category']) {
+      for (const value of ['a'.repeat(51), 'Yarn\nThread', '\u200b', null, {}, 42]) {
+        assert.ok(validateMaterialForm({ itemName: 'Yarn', category: 'Thread', stock: '0', [field]: value }, editing).errors[field]);
+      }
+    }
+  }
+  assert.ok(validateMaterialForm(null).errors.itemName);
+  for (const stock of ['1000001', '10000000', '1,000', '1e6', '0x10', '+1', '12 34', '1.0', null, 12]) {
+    assert.ok(validateMaterialForm({ itemName: 'Yarn', category: 'Thread', stock }).errors.stock);
+  }
+  assert.equal(validateMaterialForm({ itemName: 'Yarn', category: 'Thread', stock: ' 00012 ' }).input.stock, 12);
+});
+
 test('editing excludes stale stock and status from the request payload', () => {
   const result = validateMaterialForm({ itemName: 'Yarn', category: 'Thread', stock: '500', status: 'In Stock' }, true);
   assert.deepEqual(result, { errors: {}, input: { itemName: 'Yarn', category: 'Thread' } });
@@ -65,6 +101,19 @@ test('stock changes reject zero, fractions, insufficient stock, and overflow', (
   assert.equal(validateAdjustment('12', item, 'decrease'), '');
   assert.equal(validateAdjustment('2', item, 'increase'), '');
   assert.ok(validateAdjustment('1', { ...item, stock: Number.MAX_SAFE_INTEGER }, 'increase'));
+});
+
+test('adjustments honor the quantity cap, remaining capacity, available stock, and valid direction', () => {
+  assert.equal(validateAdjustment(String(MAX_STOCK), { ...item, stock: 0 }, 'increase'), '');
+  assert.equal(validateAdjustment(String(MAX_STOCK), { ...item, stock: MAX_STOCK }, 'decrease'), '');
+  assert.equal(validateAdjustment('1', { ...item, stock: MAX_STOCK - 1 }, 'increase'), '');
+  assert.match(validateAdjustment('2', { ...item, stock: MAX_STOCK - 1 }, 'increase'), /1,000,000/);
+  for (const value of ['1000001', '1e3', '1,000', '1.0', '-1', '+1', null, 12]) assert.ok(validateAdjustment(value, item, 'increase'));
+  assert.ok(validateAdjustment('1', item, 'invalid'));
+  assert.ok(validateAdjustment('1', null, 'increase'));
+  assert.ok(validateAdjustment('1', { ...item, stock: NaN }, 'increase'));
+  assert.match(validateAdjustment('1', { ...item, stock: MAX_STOCK + 10 }, 'decrease'), /1,000,000/);
+  assert.equal(validateAdjustment('10', { ...item, stock: MAX_STOCK + 10 }, 'decrease'), '');
 });
 
 test('list requests use twenty-per-page metadata, credentials, and cancellation', async () => {
@@ -137,6 +186,10 @@ test('add and edit dialogs have persistent labels and edit does not offer absolu
   const add = render(InventoryModal, {});
   assert.match(add, /<dialog[^>]*aria-labelledby=/);
   for (const label of ['Material name', 'Category', 'Initial stock']) assert.ok(add.includes(label));
+  assert.equal((add.match(/maxLength="50"/g) || []).length, 2);
+  assert.match(add, /Whole numbers from 0 to 1,000,000/);
+  assert.match(add, /inputMode="numeric"/);
+  assert.match(add, /aria-describedby=/);
   const edit = render(InventoryModal, { item });
   assert.match(edit, /value="Cotton yarn"/);
   assert.doesNotMatch(edit, /name="stock"/);
@@ -146,13 +199,28 @@ test('add and edit dialogs have persistent labels and edit does not offer absolu
 test('stock and deletion dialogs explain their action and preserve visible errors', () => {
   const stock = render(StockAdjustmentModal, { item, direction: 'decrease', error: 'Please refresh.' });
   assert.match(stock, /Quantity to decrease/);
-  assert.match(stock, /max="12"/);
+  assert.match(stock, /Enter 1 to 12 units/);
+  assert.match(stock, /type="text" inputMode="numeric"/);
   assert.match(stock, /role="alert"/);
   const deletion = render(DeleteMaterialModal, { item, isPending: true });
   assert.match(deletion, /This cannot be undone/);
   assert.match(deletion, /stock history is retained/);
   assert.match(deletion, /Deleting/);
   assert.equal((deletion.match(/disabled=""/g) || []).length, 3);
+});
+
+test('full or empty stock disables impossible actions and dialogs explain the bounds', () => {
+  const full = { ...item, stock: MAX_STOCK };
+  const markup = render(InventoryTable, { items: [full], onAction: () => {} });
+  assert.match(markup, /disabled=""[^>]*aria-label="Increase stock:/);
+  const atCapacity = render(StockAdjustmentModal, { item: full, direction: 'increase' });
+  assert.match(atCapacity, /Stock is at the 1,000,000 unit limit/);
+  assert.match(atCapacity, /type="submit" disabled=""/);
+  assert.match(atCapacity, /type="button">Cancel/);
+  const empty = render(StockAdjustmentModal, { item: { ...item, stock: 0 }, direction: 'decrease' });
+  assert.match(empty, /There is no stock to decrease/);
+  assert.match(empty, /type="submit" disabled=""/);
+  assert.match(render(StockAdjustmentModal, { item: { ...item, stock: MAX_STOCK - 3 }, direction: 'increase' }), /Enter 1 to 3 units/);
 });
 
 test('uncertain results and changed stock require refresh before resubmission', () => {
@@ -162,6 +230,8 @@ test('uncertain results and changed stock require refresh before resubmission', 
   assert.equal(requiresInventoryRefresh({ response: { status: 500 } }), true);
   assert.equal(requiresInventoryRefresh({ response: { status: 409 } }), true);
   assert.equal(requiresInventoryRefresh({ response: { status: 429 } }), false);
+  assert.equal(requiresInventoryRefresh({ response: { status: 400, data: { message: 'Stock limit exceeded' } } }), true);
+  assert.match(getInventoryError({ response: { status: 400, data: { message: 'Stock limit exceeded' } } }), /1,000,000.*refresh inventory/);
   assert.match(getInventoryError({ response: { status: 400, data: { message: 'Insufficient stock' } } }), /not enough stock/);
   assert.doesNotMatch(getInventoryError(new Error('database secret')), /database secret/);
 });

@@ -1,4 +1,5 @@
 import HttpError from './HttpError.js';
+import { MAX_MATERIAL_TEXT_LENGTH, MAX_STOCK, isValidMaterialText, isStockValue, isQuantityValue } from '../../../shared/inputValidation.mjs';
 
 export const validateId = (id) => {
   if (typeof id !== 'string' || !/^[a-f\d]{24}$/i.test(id)) {
@@ -13,10 +14,24 @@ const validateBody = (body) => {
 };
 
 export const validateStock = (stock) => {
-  if (!Number.isSafeInteger(stock) || stock < 0) {
-    throw new HttpError(400, 'Stock must be a nonnegative safe integer');
+  if (!isStockValue(stock)) {
+    throw new HttpError(400, `Stock must be a whole number between 0 and ${MAX_STOCK.toLocaleString('en-PH')}`);
   }
   return stock;
+};
+
+export const validateQuantity = (quantity) => {
+  if (!isQuantityValue(quantity)) {
+    throw new HttpError(400, `Quantity must be a whole number between 1 and ${MAX_STOCK.toLocaleString('en-PH')}`);
+  }
+  return quantity;
+};
+
+const validateMaterialText = (value, field) => {
+  if (!isValidMaterialText(value)) {
+    throw new HttpError(400, `${field} must contain 1 to ${MAX_MATERIAL_TEXT_LENGTH} characters without control characters`);
+  }
+  return value.trim();
 };
 
 export const parseInventoryInput = (body, { partial = false } = {}) => {
@@ -24,10 +39,7 @@ export const parseInventoryInput = (body, { partial = false } = {}) => {
   const input = {};
   for (const field of ['itemName', 'category']) {
     if (!partial || Object.hasOwn(body, field)) {
-      if (typeof body[field] !== 'string' || !body[field].trim()) {
-        throw new HttpError(400, `${field} must be a nonempty string`);
-      }
-      input[field] = body[field].trim();
+      input[field] = validateMaterialText(body[field], field === 'itemName' ? 'Material name' : 'Category');
     }
   }
   if (Object.hasOwn(body, 'stock')) {
@@ -43,18 +55,12 @@ export const parseInventoryInput = (body, { partial = false } = {}) => {
 
 export const parseQuantity = (body) => {
   validateBody(body);
-  if (!Number.isSafeInteger(body.quantity) || body.quantity <= 0) {
-    throw new HttpError(400, 'Quantity must be a positive safe integer');
-  }
-  return body.quantity;
+  return validateQuantity(body.quantity);
 };
 
 export const parseInventoryFilter = (query) => {
   if (query.category === undefined) return {};
-  if (typeof query.category !== 'string' || !query.category.trim()) {
-    throw new HttpError(400, 'category must be a nonempty string');
-  }
-  return { category: query.category.trim() };
+  return { category: validateMaterialText(query.category, 'Category') };
 };
 
 export const parsePagination = (query) => {

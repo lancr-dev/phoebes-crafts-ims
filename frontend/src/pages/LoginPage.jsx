@@ -8,6 +8,7 @@ import useRateLimit from '../hooks/useRateLimit.js';
 import useAuth from '../hooks/useAuth.js';
 import { getAuthError } from '../utils/authErrors.js';
 import { validateLogin } from '../utils/validateLogin.js';
+import { MAX_USERNAME_LENGTH, MAX_PASSWORD_BYTES } from '../../../shared/inputValidation.mjs';
 
 const LoginPage = () => {
   const { admin, isChecking, sessionError, signIn } = useAuth();
@@ -68,7 +69,7 @@ const LoginPage = () => {
             autoCapitalize="none"
             spellCheck={false}
             required
-            maxLength={100}
+            maxLength={MAX_USERNAME_LENGTH}
             value={username}
             disabled={isSubmitting}
             aria-invalid={Boolean(fieldErrors.username)}
@@ -92,7 +93,7 @@ const LoginPage = () => {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               required
-              maxLength={1024}
+              maxLength={MAX_PASSWORD_BYTES}
               value={password}
               disabled={isSubmitting}
               aria-invalid={Boolean(fieldErrors.password)}

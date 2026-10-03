@@ -35,6 +35,16 @@ test('password validation counts UTF-8 bytes without trimming the password', () 
   assert.ok(validateLogin({ username: 'admin', password: 'é'.repeat(513) }).password);
 });
 
+test('login validation rejects malformed values and multiline usernames without throwing', () => {
+  for (const values of [null, {}, { username: 42, password: true }, { username: {}, password: [] }]) {
+    const errors = validateLogin(values);
+    assert.ok(errors.username);
+    assert.ok(errors.password);
+  }
+  assert.ok(validateLogin({ username: 'admin\nname', password: 'p' }).username);
+  assert.deepEqual(validateLogin({ username: 'admin', password: ' password ' }), {});
+});
+
 test('rate-limit errors direct users to the shared countdown without stale minute estimates', () => {
   assert.equal(getAuthError({ response: { status: 429, headers: { 'retry-after': '61' } } }),
     'Too many requests. Please try again when the countdown finishes.');

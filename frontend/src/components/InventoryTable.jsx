@@ -1,5 +1,6 @@
 import { Minus, Pencil, Plus, Trash2 } from 'lucide-react';
 import '../styles/inventory-table.css';
+import { MAX_STOCK } from '../../../shared/inputValidation.mjs';
 
 const statusClasses = { 'In Stock': 'inventory-status-in', 'Low Stock': 'inventory-status-low', 'Out of Stock': 'inventory-status-out' };
 const numberFormat = new Intl.NumberFormat('en-PH');
@@ -34,7 +35,7 @@ export default function InventoryTable({ items, onAction, disabled }) {
               <div className="inventory-row-actions">
                 {actions.map(({ type, label, Icon }) => (
                   <button key={type} type="button" className={`inventory-icon-button${type === 'delete' ? ' inventory-icon-danger' : ''}`}
-                    disabled={disabled || (type === 'decrease' && item.stock === 0) || (type === 'increase' && item.stock === Number.MAX_SAFE_INTEGER)}
+                    disabled={disabled || (type === 'decrease' && item.stock === 0) || (type === 'increase' && item.stock >= MAX_STOCK)}
                     title={label} aria-label={`${label}: ${item.itemName}`} onClick={() => onAction(type, item)}>
                     <Icon size={18} aria-hidden="true" />
                   </button>

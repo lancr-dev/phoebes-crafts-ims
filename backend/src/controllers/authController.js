@@ -11,6 +11,7 @@ import {
 } from '../services/authService.js';
 import HttpError from '../utils/HttpError.js';
 import logger from '../config/logger.js';
+import { isValidUsername, isValidPassword } from '../../../shared/inputValidation.mjs';
 
 export const login = async (req, res) => {
   const body = req.body;
@@ -18,12 +19,8 @@ export const login = async (req, res) => {
     !body ||
     typeof body !== 'object' ||
     Array.isArray(body) ||
-    typeof body.username !== 'string' ||
-    !body.username.trim() ||
-    body.username.length > 100 ||
-    typeof body.password !== 'string' ||
-    !body.password ||
-    Buffer.byteLength(body.password, 'utf8') > 1024
+    !isValidUsername(body.username) ||
+    !isValidPassword(body.password)
   ) {
     throw new HttpError(400, 'Provide a valid username and password');
   }

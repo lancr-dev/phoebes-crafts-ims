@@ -1,3 +1,5 @@
+import { MAX_MATERIAL_TEXT_LENGTH, MAX_STOCK, isValidMaterialText, isStockValue, isWholeNumberInput } from '../../../shared/inputValidation.mjs';
+
 export const INVENTORY_PAGE_SIZE = 20;
 
 const statuses = ['In Stock', 'Low Stock', 'Out of Stock'];
@@ -37,23 +39,30 @@ export const parseInventoryCategories = (data) => {
   return categories;
 };
 
-const wholeNumber = (value) => typeof value === 'string' && /^\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value));
-
 export const validateMaterialForm = (values, isEditing = false) => {
   const errors = {};
-  const itemName = values.itemName.trim();
-  const category = values.category.trim();
-  if (!itemName) errors.itemName = 'Enter a material name.';
-  if (!category) errors.category = 'Enter a category.';
-  if (!isEditing && !wholeNumber(values.stock)) errors.stock = 'Enter a whole number of zero or more.';
-  return { errors, input: { itemName, category, ...(!isEditing && { stock: Number(values.stock) }) } };
+  const itemName = typeof values?.itemName === 'string' ? values.itemName.trim() : '';
+  const category = typeof values?.category === 'string' ? values.category.trim() : '';
+  for (const [field, label, value] of [['itemName', 'material name', itemName], ['category', 'category', category]]) {
+    if (!value) errors[field] = `Enter a ${label}.`;
+    else if (value.length > MAX_MATERIAL_TEXT_LENGTH) errors[field] = `Use ${MAX_MATERIAL_TEXT_LENGTH} characters or fewer.`;
+    else if (!isValidMaterialText(value)) errors[field] = `Enter a ${label} on one line without control characters.`;
+  }
+  const stock = isWholeNumberInput(values?.stock) ? Number(values.stock) : NaN;
+  if (!isEditing && !isStockValue(stock)) errors.stock = `Enter a whole number from 0 to ${MAX_STOCK.toLocaleString('en-PH')}.`;
+  return { errors, input: { itemName, category, ...(!isEditing && { stock }) } };
 };
 
 export const validateAdjustment = (value, item, direction) => {
-  if (!wholeNumber(value) || Number(value) < 1) return 'Enter a whole number of at least 1.';
+  if (direction !== 'increase' && direction !== 'decrease') return 'Choose increase or decrease stock.';
+  if (!Number.isSafeInteger(item?.stock) || item.stock < 0) return 'Close this dialog and refresh inventory.';
+  if (!isWholeNumberInput(value) || Number(value) < 1 || Number(value) > MAX_STOCK) {
+    return `Enter a whole number from 1 to ${MAX_STOCK.toLocaleString('en-PH')}.`;
+  }
   const quantity = Number(value);
   if (direction === 'decrease' && quantity > item.stock) return 'Quantity exceeds the available stock.';
-  if (direction === 'increase' && !Number.isSafeInteger(item.stock + quantity)) return 'The resulting stock is too large.';
+  const resultingStock = item.stock + (direction === 'increase' ? quantity : -quantity);
+  if (resultingStock > MAX_STOCK) return `Stock cannot exceed ${MAX_STOCK.toLocaleString('en-PH')}.`;
   return '';
 };
 
@@ -65,6 +74,7 @@ export const getInventoryError = (error, { mutation = false, offline = false } =
   if (status === 404) return 'This material no longer exists. Close this dialog and refresh inventory.';
   if (status === 409) return 'This material changed. Close this dialog and refresh before trying again.';
   if (status === 400 && error.response?.data?.message === 'Insufficient stock') return 'There is not enough stock. Close this dialog and refresh inventory.';
+  if (status === 400 && error.response?.data?.message === 'Stock limit exceeded') return `Stock cannot exceed ${MAX_STOCK.toLocaleString('en-PH')}. Close this dialog and refresh inventory.`;
   if (status === 400) return 'The material data could not be accepted. Check your entries.';
   if (mutation && (!error.response || status >= 500 || error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')) {
     return 'The result could not be confirmed. Close this dialog and refresh inventory before trying again.';
@@ -75,5 +85,5 @@ export const getInventoryError = (error, { mutation = false, offline = false } =
 export const requiresInventoryRefresh = (error) => {
   const status = error.response?.status;
   return !status || status >= 500 || status === 404 || status === 409 ||
-    (status === 400 && error.response?.data?.message === 'Insufficient stock');
+    (status === 400 && ['Insufficient stock', 'Stock limit exceeded'].includes(error.response?.data?.message));
 };
